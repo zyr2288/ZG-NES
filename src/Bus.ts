@@ -5,10 +5,10 @@ import { PPU } from "./PPU/PPU";
 
 export class Bus {
 
-	cpu: CPU;
-	rom: Rom;
-	ppu: PPU;
-	mapper: IMapper;
+	cpu!: CPU;
+	rom!: Rom;
+	ppu!: PPU;
+	mapper!: IMapper;
 
 	ReadByte(address: number) {
 		if (address < 0x2000)

@@ -2,7 +2,7 @@ import { Bus } from "../Bus";
 import { IMapper } from "./IMapper";
 
 export class Mapper2 implements IMapper {
-	readonly bus: Bus;
+	readonly bus!: Bus;
 	prgSize: number = 0x4000;
 	chrSize: number = 0;
 
@@ -11,6 +11,7 @@ export class Mapper2 implements IMapper {
 
 	Initialization(option: { maxPrg: number }): void {
 		this.bus.rom.prgIndex = [0, 0, option.maxPrg, option.maxPrg];
+		this.bus.ppu.useChrRam = true;
 	}
 
 	Write(address: number, value: number): void {

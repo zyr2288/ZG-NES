@@ -24,7 +24,10 @@ export class PPU {
 	bgIndex = [0, 0, 0, 0];
 	bgDatas: Uint8Array[] = [];
 
-	patternTable = new Uint8Array(0x20);
+	useChrRam = false;
+	colorTable = new Uint8Array(0x20);
+	/**256 * 2个 Tile */
+	chrRam: Tile[] = [];
 
 	/**Controller ($2000) > write */
 	private ppuCTRL = {
@@ -92,8 +95,9 @@ export class PPU {
 		this.bus = bus;
 		this.bus.ppu = this;
 
-		for (let i = 0; i < this.bgDatas.length; i++)
+		for (let i = 0; i < this.bgDatas.length; i++) {
 			this.bgDatas[i] = new Uint8Array(0x400);
+		}
 	}
 
 	Write(address: number, value: number) {
@@ -167,6 +171,19 @@ export class PPU {
 	}
 
 	private Write_2007(value: number) {
+		if (this.ppuAddress < 0x2000) {
+			if (!this.chrRam)
+				return;
+
+			let address = this.ppuAddress >> 4;
+
+			this.chrRam[this.ppuAddress >> 4].SetData(this.ppuAddress & 0xF, value);
+			return;
+		}
+
+		if (this.ppuAddress >= 0x3F00)
+			this.colorTable[this.ppuAddress & 0x1F] = value;
+
 		this.ppuAddress += this.ppuCTRL.vramAddIncrement;
 	}
 	//#endregion 写入各个接口

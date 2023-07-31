@@ -13,10 +13,11 @@ export class Rom {
 	chrIndex = [0, 0, 0, 0, 0, 0, 0, 0];
 
 	prgCount = 0;
-	prgBanks: Uint8Array[];
+	prgBanks: Uint8Array[] = [];
 
 	chrCount = 0;
-	chrBanks: Tile[][];
+	chrRam = false;
+	chrBanks: Tile[][] = [];
 
 	constructor(bus: Bus) {
 		this.bus = bus;
@@ -43,6 +44,9 @@ export class Rom {
 		this.useSRAM = (data[6] & 0x02) !== 0;
 
 		let mapper = MapperLoader.LoadMapper(tempNum);
+		if (!mapper)
+			throw `不支持 Mapper${tempNum}`;
+		
 		this.bus.mapper = new mapper(this.bus);
 
 		//拷贝PRG-ROM次数
