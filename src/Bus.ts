@@ -18,9 +18,8 @@ export class Bus {
 			return this.rom.useSRAM ? 0 : this.cpu.sram[address & 0x1FFF];
 
 		let tempAdd = (address & 0x7000) >> 12;
-		let index = this.rom.prgBankIndex[tempAdd];
+		let index = this.rom.prgIndex[tempAdd];
 		let result = this.rom.prgBanks[index][address & 0xFFF];
-
 		return result;
 	}
 
@@ -41,6 +40,6 @@ export class Bus {
 			return;
 		}
 
-		this.mapper.SwitchBank(address, value);
+		this.mapper.Write(address, value);
 	}
 }

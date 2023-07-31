@@ -1,4 +1,5 @@
 import { Bus } from "../Bus";
+import { MapperLoader } from "../Mapper/IMapper";
 import { Tile } from "../PPU/PPUBlock";
 import { Utils } from "../Utils";
 
@@ -8,8 +9,8 @@ export class Rom {
 	useSRAM = false;
 	screenMiror = false;
 
-	prgBankIndex = [0, 0, 0, 0, 0, 0, 0, 0];
-	chrBankIndex = [0, 0, 0, 0, 0, 0, 0, 0];
+	prgIndex = [0, 0, 0, 0];
+	chrIndex = [0, 0, 0, 0, 0, 0, 0, 0];
 
 	prgCount = 0;
 	prgBanks: Uint8Array[];
@@ -22,6 +23,7 @@ export class Rom {
 		this.bus.rom = this;
 	}
 
+	//#region 载入文件
 	/**
 	 * 载入文件
 	 * @param data 文件数据
@@ -40,7 +42,8 @@ export class Rom {
 		this.screenMiror = (data[6] & 0x01) !== 0;
 		this.useSRAM = (data[6] & 0x02) !== 0;
 
-		
+		let mapper = MapperLoader.LoadMapper(tempNum);
+		this.bus.mapper = new mapper(this.bus);
 
 		//拷贝PRG-ROM次数
 		tempNum = data[4] * 0x4000 / this.bus.mapper.prgSize;
@@ -58,7 +61,7 @@ export class Rom {
 		if (data[4] == 1)
 			this.prgBanks[1] = tempArray;
 
-		this.bus.mapper.Initialization();
+		this.bus.mapper.Initialization({ maxPrg: tempNum - 1 });
 
 		//如果无CHR-ROM，则返回
 		if (data[5] == 0)
@@ -87,5 +90,18 @@ export class Rom {
 		}
 
 		return true;
+	}
+	//#endregion 载入文件
+
+	ReadChrRom(tileNum: number, isLeft: boolean) {
+		let temp = tileNum >> 6;
+		let select = 4;
+		if (!isLeft) {
+			tileNum += 0x100;
+			select = 0;
+		}
+
+		tileNum -= this.bus.mapper.chrOffset[temp + select];
+		return this.chrBanks[this.chrIndex[select]][tileNum];
 	}
 }
