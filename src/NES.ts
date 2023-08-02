@@ -1,21 +1,24 @@
 import { Bus } from "./Bus";
 import { CPU } from "./CPU/CPU";
 import { Rom } from "./CPU/Rom";
+import { DebugUtils } from "./Debug/DebugUtils";
 import { PPU } from "./PPU/PPU";
 
 export class NES {
 
 	bus: Bus;
 
-	private cpu: CPU;
-	private rom: Rom;
-	private ppu: PPU;
+	// private cpu: CPU;
+	// private rom: Rom;
+	// private ppu: PPU;
+	// private debug: DebugUtils;
 
 	constructor() {
 		this.bus = new Bus();
-		this.cpu = new CPU(this.bus);
-		this.rom = new Rom(this.bus);
-		this.ppu = new PPU(this.bus);
+		new CPU(this.bus);
+		new Rom(this.bus);
+		new PPU(this.bus);
+		new DebugUtils(this.bus);
 	}
 
 	/**执行一帧 */
@@ -25,12 +28,10 @@ export class NES {
 
 	LoadFile(data: ArrayBuffer) {
 		let temp = new Uint8Array(data);
-		this.rom.LoadRom(temp);
+		this.bus.rom.LoadRom(temp);
+	}
+
+	TestFunction(canvas:HTMLCanvasElement) {
+		this.bus.debug.SetPatternCanvas(canvas);
 	}
 }
-
-// @ts-ignore
-globalThis || (globalThis = this);
-
-// @ts-ignore
-globalThis.NES = NES;

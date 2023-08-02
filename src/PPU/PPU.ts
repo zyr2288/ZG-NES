@@ -19,6 +19,7 @@ export class PPU {
 	showSprite = false;
 	/**扫描线 */
 	scanLine = 0;
+	/**PPU周期 */
 	cycle = 0;
 
 	bgIndex = [0, 0, 0, 0];
@@ -172,18 +173,22 @@ export class PPU {
 
 	private Write_2007(value: number) {
 		if (this.ppuAddress < 0x2000) {
-			if (!this.chrRam)
-				return;
-
-			let address = this.ppuAddress >> 4;
-
-			this.chrRam[this.ppuAddress >> 4].SetData(this.ppuAddress & 0xF, value);
-			return;
+			if (this.chrRam)
+				this.chrRam[this.ppuAddress >> 4].SetData(this.ppuAddress & 0xF, value);
+		} else if (this.ppuAddress >= 0x3F00) {
+			let address = this.ppuAddress & 0x1F;
+			if (address === 0)
+				this.colorTable[0x00] = this.colorTable[0x04] = this.colorTable[0x08] = this.colorTable[0x0C] = value;
+			else if (address == 0x10)
+				this.colorTable[0x10] = this.colorTable[0x14] = this.colorTable[0x18] = this.colorTable[0x1C] = value;
+			else
+				this.colorTable[address] = value;
+		} else {
+			let address = this.ppuAddress & 0x2FFF;
+			let index = this.bgIndex[(address >> 8) & 3];
+			address = this.ppuAddress & 0x3FF;
+			this.bgDatas[index][address] = value;
 		}
-
-		if (this.ppuAddress >= 0x3F00)
-			this.colorTable[this.ppuAddress & 0x1F] = value;
-
 		this.ppuAddress += this.ppuCTRL.vramAddIncrement;
 	}
 	//#endregion 写入各个接口

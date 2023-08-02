@@ -5,6 +5,7 @@ export const CPU_Dendy = 1773448.0;
 export const BitValue = [1, 2, 4, 8, 0x10, 0x20, 0x40, 0x80];
 export enum CPUType { NTSC, PAL, Dendy }
 
+export const AppDebug = true;
 
 /**NES颜色 */
 export const NesColors: number[] = [

@@ -13,6 +13,7 @@ export interface IMapper {
 }
 
 export class MapperLoader {
+
 	static LoadMapper(mapperIndex: number) {
 		switch (mapperIndex) {
 			case 0: return Mapper0;

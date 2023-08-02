@@ -4,7 +4,7 @@ const path = require('path');
 
 /** @type WebpackConfig */
 module.exports = {
-	entry: './src/NES.ts',
+	entry: "./src/NES.ts",
 	mode: "development",
 	module: {
 		rules: [
@@ -19,7 +19,8 @@ module.exports = {
 		extensions: ['.tsx', '.ts', '.js'],
 	},
 	output: {
-		filename: 'bundle.js',
+		library: { name: "NES", type: "var", export: "NES" },
+		filename: "bundle.js",
 		path: path.resolve(__dirname, 'dist'),
 	},
 	// devtool:"source-map"

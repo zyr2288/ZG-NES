@@ -1,5 +1,6 @@
 import { CPU } from "./CPU/CPU";
 import { Rom } from "./CPU/Rom";
+import { DebugUtils } from "./Debug/DebugUtils";
 import { IMapper } from "./Mapper/IMapper";
 import { PPU } from "./PPU/PPU";
 
@@ -9,6 +10,8 @@ export class Bus {
 	rom!: Rom;
 	ppu!: PPU;
 	mapper!: IMapper;
+
+	debug!: DebugUtils;
 
 	ReadByte(address: number) {
 		if (address < 0x2000)

@@ -6,9 +6,6 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>测试</title>
 	<script src="bundle.js"></script>
-	<script>
-		var nes = new NES();
-	</script>
 </head>
 
 <body>
@@ -17,36 +14,6 @@
 	<canvas id="screen"></canvas>
 	<hr>
 	<canvas id="pattern"></canvas>
-
-	<script>
-		async function OpenFile() {
-			let file = await OpenFileDialog(".nes");
-			nes.LoadFile(file);
-		}
-
-		function OpenFileDialog(accept) {
-			return new Promise((resolve, reject) => {
-				let input = document.createElement("input");
-				input.type = "file";
-				input.accept = accept;
-				input.onchange = async (ev) => {
-					if (!input.files || input.files.length == 0) {
-						reject();
-						return;
-					}
-
-					let reader = new FileReader();
-					reader.onload = (ev) => {
-						let temp = ev.target.result;
-						let buffer = new Uint8Array(temp);
-						resolve(buffer);
-					}
-					reader.readAsArrayBuffer(input.files[0]);
-				}
-				input.click();
-			});
-		}
-	</script>
 </body>
 
 </html>

@@ -1,6 +1,5 @@
 {
 	"compilerOptions": {
-		"composite": true,
 		"outDir": "./dist/",
 		"strictNullChecks": true,
 		"strictPropertyInitialization": true,

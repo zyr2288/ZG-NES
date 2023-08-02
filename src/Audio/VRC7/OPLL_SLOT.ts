@@ -224,7 +224,7 @@ export class OPLL_SLOT {
 		this.request_update(SLOT_UPDATE_FLAG.UPDATE_EG);
 	}
 
-	calc_envelope(buddy: OPLL_SLOT, eg_counter: number, test: number) {
+	calc_envelope(buddy: OPLL_SLOT | null, eg_counter: number, test: number) {
 
 		let mask = (1 << this.eg_shift) - 1;
 		let s;

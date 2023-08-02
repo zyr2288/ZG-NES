@@ -7,28 +7,28 @@ export class OPLL {
 	clk: number;
 	rate: number;
 
-	chip_type: number;
+	chip_type: number = 0;
 
-	adr: number;
+	adr: number = 0;
 
-	inp_step: number;
-	out_step: number;
-	out_time: number;
+	inp_step: number = 0;
+	out_step: number = 0;
+	out_time: number = 0;
 
 	reg = new Uint8Array(0x40);
-	test_flag: number;
-	slot_key_status: number;
-	rhythm_mode: number;
+	test_flag: number = 0;
+	slot_key_status: number = 0;
+	rhythm_mode: number = 0;
 
-	eg_counter: number;
+	eg_counter: number = 0;
 
-	pm_phase: number;
-	am_phase: number;
+	pm_phase: number = 0;
+	am_phase: number = 0;
 
-	lfo_am: number;
+	lfo_am: number = 0;
 
-	noise: number;
-	short_noise: number;
+	noise: number = 0;
+	short_noise: number = 0;
 
 	patch_number = new Int32Array(9);
 	/**18 */
@@ -47,13 +47,12 @@ export class OPLL {
 
 	mix_out = new Int16Array(2);
 
-	conv: OPLL_RateConv;
+	conv: OPLL_RateConv | null;
 
 	constructor(clk: number, rate: number) {
 
 		console.log(rate);
 		
-
 		let i;
 		InitializeTables();
 

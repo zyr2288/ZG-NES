@@ -32,39 +32,37 @@ enum Flags {
 
 class Register {
 	/**寄存器A */
-	a: number;
+	a = 0;
 	/**寄存器X */
-	x: number;
+	x = 0;
 	/**寄存器Y */
-	y: number;
+	y = 0;
 	/**寄存器SP */
-	sp: number;
+	sp = 0;
 	/**寄存器P */
-	p: number;
+	p = 0;
 	/**寄存器PC */
-	pc: number;
+	pc = 0;
 }
+
+
 
 export class CPU {
 
-	readonly CPUFrameClock: number;
-	readonly CPUClockRate: number;
+	readonly CPUFrameClock: number = 0;
+	readonly CPUClockRate: number = 0;
 	registers = new Register();
 
-	cpuClock: number;
+	cpuClock: number = 0;
 
 	flags: boolean[] = [false, false, false, false, false, false, false, false];
 
 	ram = new Uint8Array(0x800);
 	sram = new Uint8Array(0x2000);
 
-	nmiAddress: number;
-	resetAddress: number;
-	irqAddress: number;
-
 	private addrData = { temp: 0, address: -1, data: -1, crossPage: false };
-	private instructionMap: Map<Instruction, Function>;
-	private addressModeMap: Map<AddressingMode, Function>;
+	private instructionMap!: Map<Instruction, Function>;
+	private addressModeMap!: Map<AddressingMode, Function>;
 	private readonly bus: Bus;
 
 	constructor(bus: Bus) {
