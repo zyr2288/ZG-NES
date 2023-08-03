@@ -3,6 +3,7 @@ export const CPU_PAL = 1662607.03;
 export const CPU_Dendy = 1773448.0;
 
 export const BitValue = [1, 2, 4, 8, 0x10, 0x20, 0x40, 0x80];
+export const BitValueRev = [0x80, 0x40, 0x20, 0x10, 8, 4, 2, 1];
 export enum CPUType { NTSC, PAL, Dendy }
 
 export const AppDebug = true;
@@ -26,6 +27,10 @@ export const NesColors: number[] = [
 	//0x38 - 0x3F
 	0xFCE4A0, 0xE0FCA0, 0xA8F0BC, 0xB0FCCC, 0x9CFCF0, 0xC4C4C4, 0x000000, 0x000000
 ];
+
+export const NesColorsStr: string[] = NesColors.map(value => {
+	return "#" + value.toString(16).padStart(6, "0");
+});
 
 /**1P按键控制 */
 export const enum Keys {

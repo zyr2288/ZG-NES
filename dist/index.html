@@ -6,10 +6,18 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>测试</title>
 	<script src="bundle.js"></script>
+	<script src="test.js"></script>
+	<style>
+		canvas {
+			border: 1px solid #000;
+		}
+	</style>
 </head>
 
 <body>
 	<button onclick="OpenFile()">打开文件</button>
+	<button onclick="Test()">测试</button>
+	<button onclick="Step()">单步</button>
 	<hr>
 	<canvas id="screen"></canvas>
 	<hr>

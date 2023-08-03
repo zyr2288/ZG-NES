@@ -21,6 +21,10 @@ export class NES {
 		new DebugUtils(this.bus);
 	}
 
+	Reset() {
+		this.bus.cpu.Reset();
+	}
+
 	/**执行一帧 */
 	OneFrame() {
 
@@ -29,9 +33,12 @@ export class NES {
 	LoadFile(data: ArrayBuffer) {
 		let temp = new Uint8Array(data);
 		this.bus.rom.LoadRom(temp);
+		this.bus.cpu.Reset();
 	}
 
-	TestFunction(canvas:HTMLCanvasElement) {
+	/**更新调色板信息 */
+	UpdatePattern(canvas: HTMLCanvasElement) {
 		this.bus.debug.SetPatternCanvas(canvas);
+		this.bus.debug.patternTable?.UpdatePattern();
 	}
 }

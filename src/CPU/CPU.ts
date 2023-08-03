@@ -45,13 +45,13 @@ class Register {
 	pc = 0;
 }
 
-
-
 export class CPU {
 
 	readonly CPUFrameClock: number = 0;
 	readonly CPUClockRate: number = 0;
 	registers = new Register();
+
+	breaks = { nmi: 0, irq: 0, reset: 0 };
 
 	cpuClock: number = 0;
 
@@ -83,12 +83,11 @@ export class CPU {
 
 		this.registers.p = 0x24;
 
-		// this.interruptType = 0;
 		this.cpuClock = 0;
 
-		// this.irqAddress = this.GetMemoryData(0xFFFE, 2);
-		// this.nmiAddress = this.GetMemoryData(0xFFFA, 2);
-		// this.registers.pc = this.GetMemoryData(0xFFFC, 2);
+		this.breaks.irq = this.bus.ReadWord(0xFFFE);
+		this.breaks.nmi = this.bus.ReadWord(0xFFFA);
+		this.registers.pc = this.breaks.reset = this.bus.ReadWord(0xFFFC);
 
 		this.registers.a = this.registers.x = this.registers.y = 0;
 		this.registers.sp = 0xFF;
@@ -195,7 +194,7 @@ export class CPU {
 		}
 
 		if (entry.instruction === Instruction.INVALID) {
-			return;
+			throw new Error(`Invalid opcode '${opcode}(0x${opcode.toString(16)})', pc: 0x${(this.registers.pc - 1).toString(16)}`);
 		}
 
 		const addrModeFunc = this.addressModeMap.get(entry.addressingMode);
@@ -203,8 +202,8 @@ export class CPU {
 			throw new Error(`Unsuppored addressing mode: ${AddressingMode[entry.addressingMode]}`);
 		}
 
-		const ret: AddressData = addrModeFunc.call(this);
-		if (ret.CrossPage) {
+		addrModeFunc.call(this);
+		if (this.addrData.crossPage) {
 			this.cpuClock += entry.pageCycles;
 		}
 
@@ -213,8 +212,12 @@ export class CPU {
 			throw new Error(`Unsupported instruction: ${Instruction[entry.instruction]}`);
 		}
 
-		instrFunc.call(this, ret, entry.addressingMode);
+		instrFunc.call(this);
 		this.cpuClock += entry.cycles;
+
+		this.addrData.crossPage = false;
+		this.addrData.address = -1;
+		this.addrData.data = -1;
 	}
 	//#endregion 单步
 

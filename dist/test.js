@@ -1,15 +1,12 @@
-import type { NES } from "./src/NES";
-
-// @ts-ignore
 var nes = new NES();
 
-var OpenFile = async () => {
+async function OpenFile() {
 	// @ts-ignore
 	let file = await OpenFileDialog(".nes");
 	nes.LoadFile(file);
 }
 
-var OpenFileDialog = (accept: string): Promise<Uint8Array> => {
+function OpenFileDialog(accept) {
 	return new Promise((resolve, reject) => {
 		let input = document.createElement("input");
 		input.type = "file";
@@ -22,12 +19,21 @@ var OpenFileDialog = (accept: string): Promise<Uint8Array> => {
 
 			let reader = new FileReader();
 			reader.onload = (ev) => {
-				let temp = ev.target!.result;
-				let buffer = new Uint8Array(temp as ArrayBuffer);
+				let temp = ev.target.result;
+				let buffer = new Uint8Array(temp);
 				resolve(buffer);
 			}
 			reader.readAsArrayBuffer(input.files[0]);
 		}
 		input.click();
 	});
+}
+
+function Test() {
+	let canvas = document.getElementById("pattern");
+	nes.UpdatePattern(canvas);
+}
+
+function Step() {
+	nes.bus.cpu.Step();
 }

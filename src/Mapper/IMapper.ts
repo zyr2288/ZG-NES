@@ -4,10 +4,13 @@ import { Mapper2 } from "./Mapper2";
 
 export interface IMapper {
 	readonly bus: Bus;
+
 	prgSize: number;
 	prgOffset: number[];
+
 	chrSize: number;
 	chrOffset: number[];
+
 	Initialization(option: { maxPrg: number }): void;
 	Write(address: number, value: number): void;
 }

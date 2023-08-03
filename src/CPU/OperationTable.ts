@@ -16,19 +16,32 @@ export enum Instruction {
 
 /**寻址方式 */
 export enum AddressingMode {
-	IMPLICIT,			// CLC | RTS
-	ACCUMULATOR,		// LSR A
-	IMMEDIATE,			// LDA #10
-	ZERO_PAGE,			// LDA $00
-	ZERO_PAGE_X,		// STY $10, X
-	ZERO_PAGE_Y,		// LDX $10, Y
-	RELATIVE,			// BEQ label | BNE *+4
-	ABSOLUTE,			// JMP $1234
-	ABSOLUTE_X,			// STA $3000, X
-	ABSOLUTE_Y,			// AND $4000, Y
-	INDIRECT,			// JMP ($FFFC)
-	X_INDEXED_INDIRECT,	// LDA ($40, X)
-	INDIRECT_Y_INDEXED,	// LDA ($40), Y
+	/**隐含寻址 CLC | RTS */
+	IMPLICIT,
+	/**寄存器A LSR A */
+	ACCUMULATOR,
+	/**立即寻址 LDA #10 */
+	IMMEDIATE,
+	/**零页寻址 LDA $00 */
+	ZERO_PAGE,
+	/**零页寻址偏转X STY $10,X */
+	ZERO_PAGE_X,
+	/**零页寻址偏转Y LDX $10,Y */
+	ZERO_PAGE_Y,
+	/**相对寻址 BEQ label | BNE *+4 */
+	RELATIVE,
+	/**绝对寻址 JMP $1234 */
+	ABSOLUTE,
+	/** 绝对寻址偏转X STA $3000,X */
+	ABSOLUTE_X,
+	/** 绝对寻址偏转Y AND $4000,Y */
+	ABSOLUTE_Y,
+	/** 相对寻址 JMP ($FFFC) */
+	INDIRECT,
+	/** 相对寻址，偏转X LDA ($40,X) */
+	X_INDEXED_INDIRECT,
+	/** 相对寻址，偏转Y LDA ($40),Y */
+	INDIRECT_Y_INDEXED,
 }
 
 export interface IOpcodeEntry {

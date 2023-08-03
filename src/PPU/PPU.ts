@@ -6,6 +6,10 @@ const SpriteCount = 64;
 const LineMaxSprite = 8;
 const BaseNametableAddress = [0x2000, 0x2400, 0x2800, 0x2C00];
 
+export enum MirrorType {
+	Horizontal, Vertical, NT0, NT1, NT2, NT3, FourScreen
+}
+
 /**
  * 1个CPU周期 = 3个PPU周期
  * 一行扫描线有341个周期
@@ -21,9 +25,11 @@ export class PPU {
 	scanLine = 0;
 	/**PPU周期 */
 	cycle = 0;
+	mirrorType = MirrorType.FourScreen;
 
-	bgIndex = [0, 0, 0, 0];
-	bgDatas: Uint8Array[] = [];
+
+	nameTableMap = [0, 0, 0, 0];
+	nameTableData: Uint8Array[] = [];
 
 	useChrRam = false;
 	colorTable = new Uint8Array(0x20);
@@ -96,11 +102,13 @@ export class PPU {
 		this.bus = bus;
 		this.bus.ppu = this;
 
-		for (let i = 0; i < this.bgDatas.length; i++) {
-			this.bgDatas[i] = new Uint8Array(0x400);
+		for (let i = 0; i < this.nameTableData.length; i++) {
+			this.nameTableData[i] = new Uint8Array(0x400);
 		}
 	}
 
+	//#region 写入
+	/**写入 */
 	Write(address: number, value: number) {
 		switch (address) {
 			case 0x2000:
@@ -121,7 +129,10 @@ export class PPU {
 				break;
 		}
 	}
+	//#endregion 写入
 
+	//#region 读取
+	/**读取 */
 	Read(address: number) {
 		let data: number = -1;
 		switch (address) {
@@ -137,6 +148,36 @@ export class PPU {
 		}
 		return data;
 	}
+	//#endregion 读取
+
+	//#region 设定镜像
+	/**设定镜像 */
+	SetMirrorType(type: MirrorType) {
+		this.mirrorType = type;
+		switch (type) {
+			case MirrorType.Horizontal:
+				this.nameTableMap[0] = this.nameTableMap[1] = 0;
+				this.nameTableMap[2] = this.nameTableMap[3] = 2;
+				break;
+			case MirrorType.Vertical:
+				this.nameTableMap[0] = this.nameTableMap[2] = 0;
+				this.nameTableMap[1] = this.nameTableMap[3] = 1;
+				break;
+			case MirrorType.NT0:
+			case MirrorType.NT1:
+			case MirrorType.NT2:
+			case MirrorType.NT3:
+				this.nameTableMap[0] = this.nameTableMap[1] = this.nameTableMap[2] = this.nameTableMap[3] = type - MirrorType.NT0;
+				break;
+			case MirrorType.FourScreen:
+				this.nameTableMap[0] = 0;
+				this.nameTableMap[1] = 1;
+				this.nameTableMap[2] = 2;
+				this.nameTableMap[3] = 3;
+				break;
+		}
+	}
+	//#endregion 设定镜像
 
 	//#region 写入各个接口
 	private Write_2000(value: number) {
@@ -185,9 +226,9 @@ export class PPU {
 				this.colorTable[address] = value;
 		} else {
 			let address = this.ppuAddress & 0x2FFF;
-			let index = this.bgIndex[(address >> 8) & 3];
+			let index = this.nameTableMap[(address >> 8) & 3];
 			address = this.ppuAddress & 0x3FF;
-			this.bgDatas[index][address] = value;
+			this.nameTableData[index][address] = value;
 		}
 		this.ppuAddress += this.ppuCTRL.vramAddIncrement;
 	}

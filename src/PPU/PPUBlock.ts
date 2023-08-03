@@ -1,4 +1,4 @@
-import { BitValue } from "../NESConst";
+import { BitValueRev } from "../NESConst";
 
 export class Sprite {
 	x = 0;
@@ -42,7 +42,7 @@ export class Tile {
 		}
 
 		for (let x = 0; x < 8; x++) {
-			if ((value & BitValue[x]) !== 0)
+			if ((value & BitValueRev[x]) !== 0)
 				this.colorData[x][y] |= bit;
 			else
 				this.colorData[x][y] &= antiBit;

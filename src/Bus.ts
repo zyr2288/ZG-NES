@@ -20,10 +20,7 @@ export class Bus {
 		if (address < 0x8000)
 			return this.rom.useSRAM ? 0 : this.cpu.sram[address & 0x1FFF];
 
-		let tempAdd = (address & 0x7000) >> 12;
-		let index = this.rom.prgIndex[tempAdd];
-		let result = this.rom.prgBanks[index][address & 0xFFF];
-		return result;
+		return this.rom.ReadPrgRom(address);
 	}
 
 	ReadWord(address: number) {

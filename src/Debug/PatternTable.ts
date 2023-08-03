@@ -1,8 +1,9 @@
 import { Bus } from "../Bus";
-import { NesColors } from "../NESConst";
+import { NesColorsStr } from "../NESConst";
 import { Tile } from "../PPU/PPUBlock";
 
 const PixWidth = 2;
+const ColorTableWidth = 32;
 
 export class PatternTable {
 
@@ -11,8 +12,9 @@ export class PatternTable {
 
 	constructor(option: { canvas: HTMLCanvasElement, bus: Bus }) {
 		this.context = option.canvas.getContext("2d")!;
-		option.canvas.width = PixWidth * 8 * 16 * 2;
-		option.canvas.height = PixWidth * 8 * 16;
+
+		option.canvas.width = PixWidth * 8 * 16 * PixWidth;
+		option.canvas.height = PixWidth * 8 * 16 + ColorTableWidth * 2;
 
 		this.bus = option.bus;
 	}
@@ -21,25 +23,63 @@ export class PatternTable {
 		let x = 0;
 		let y = 0;
 
-		let chrIndex = 0;
 		let colors: string[] = [];
 		for (let i = 0; i < this.bus.ppu.colorTable.length; i++) {
 			let index = this.bus.ppu.colorTable[i];
-			colors[i] = "#" + NesColors[index].toString(16).padStart(6, "0");
+			colors[i] = NesColorsStr[index];
 		}
 
-		for (let i = 0; i < 0x200; i++) {
-			let tile = this.bus.rom.ReadChrRom(chrIndex & 0xFF, chrIndex > 0xFF);
+		for (let i = 0; i < 0x100; i++) {
+			let tile = this.bus.rom.ReadChrRom(i, true);
+			this.DrawTiles(x, y, PixWidth, tile, colors);
+			x += PixWidth * 8;
+			if ((i & 0xF) === 0xF) {
+				x = 0;
+				y += PixWidth * 8;
+			}
+		}
+
+		const DefaultX = PixWidth * 8 * 16;
+		x = DefaultX;
+		y = 0;
+		for (let i = 0; i < 0x100; i++) {
+			let tile = this.bus.rom.ReadChrRom(i, false);
+			this.DrawTiles(x, y, PixWidth, tile, colors);
+			x += PixWidth * 8;
+			if ((i & 0xF) === 0xF) {
+				x = DefaultX;
+				y += PixWidth * 8;
+			}
+		}
+
+		x = 0;
+		y = PixWidth * 8 * 16;
+		for (let i = 0; i < this.bus.ppu.colorTable.length; i++) {
+			let index = this.bus.ppu.colorTable[i];
+			this.DrawColor(x, y, ColorTableWidth, NesColorsStr[index]);
+			x += ColorTableWidth;
+			if ((i & 0xF) === 0xF) {
+				x = 0;
+				y += ColorTableWidth;
+			}
 		}
 	}
 
-	private DrawTiles(x: number, y: number, width: number, tiles: Tile, colors: string[]) {
+	private DrawTiles(x: number, y: number, width: number, tile: Tile, colors: string[]) {
+		if (!tile)
+			throw "Tile 不存在";
+
 		for (let pixY = 0; pixY < 8; pixY++) {
 			for (let pixX = 0; pixX < 8; pixX++) {
-				let colorIndex = tiles.GetData(pixX, pixY);
+				let colorIndex = tile.GetData(pixX, pixY);
 				this.context.fillStyle = colors[colorIndex];
 				this.context.fillRect(x + pixX * width, y + pixY * width, width, width);
 			}
 		}
+	}
+
+	private DrawColor(x: number, y: number, width: number, color: string) {
+		this.context.fillStyle = color;
+		this.context.fillRect(x, y, width, width);
 	}
 }

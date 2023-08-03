@@ -9,6 +9,7 @@ export class Rom {
 	useSRAM = false;
 	screenMiror = false;
 
+	/**PRG对应的索引， */
 	prgIndex = [0, 0, 0, 0];
 	chrIndex = [0, 0, 0, 0, 0, 0, 0, 0];
 
@@ -46,7 +47,7 @@ export class Rom {
 		let mapper = MapperLoader.LoadMapper(tempNum);
 		if (!mapper)
 			throw `不支持 Mapper${tempNum}`;
-		
+
 		this.bus.mapper = new mapper(this.bus);
 
 		//拷贝PRG-ROM次数
@@ -97,15 +98,23 @@ export class Rom {
 	}
 	//#endregion 载入文件
 
+	//#region 读取CHR-ROM内容
 	ReadChrRom(tileNum: number, isLeft: boolean) {
 		let temp = tileNum >> 6;
-		let select = 4;
-		if (!isLeft) {
-			tileNum += 0x100;
-			select = 0;
-		}
-
-		tileNum -= this.bus.mapper.chrOffset[temp + select];
+		let select = (isLeft ? 0 : 4) + temp;
+		tileNum -= this.bus.mapper.chrOffset[select];
 		return this.chrBanks[this.chrIndex[select]][tileNum];
 	}
+	//#endregion 读取CHR-ROM内容
+
+	//#region 读取PRG-ROM内容
+	ReadPrgRom(address: number) {
+		let tempAdd = (address >> 13) & 3;
+		let index = this.prgIndex[tempAdd];
+		address -= this.bus.mapper.prgOffset[tempAdd];
+		let result = this.prgBanks[index][address];
+		return result;
+	}
+	//#endregion 读取PRG-ROM内容
+
 }
