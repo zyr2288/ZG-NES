@@ -45,10 +45,15 @@ export enum AddressingMode {
 }
 
 export interface IOpcodeEntry {
+	/**操作指令 */
 	instruction: Instruction;
+	/**寻址方式 */
 	addressingMode: AddressingMode;
+	/**包括操作指令的总长度 */
 	bytes: number;
+	/**消耗CPU周期 */
 	cycles: number;
+	/**越页多消耗的CPU周期 */
 	pageCycles: number;
 }
 
