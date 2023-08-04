@@ -11,6 +11,17 @@
 		canvas {
 			border: 1px solid #000;
 		}
+
+		#disasm, #register, #flagDiv {
+			white-space: pre;
+			font-family: "consolas";
+			display: block;
+		}
+
+		.debug {
+			display: flex;
+			gap: 10px;
+		}
 	</style>
 </head>
 
@@ -21,7 +32,12 @@
 	<hr>
 	<canvas id="screen"></canvas>
 	<hr>
-	<canvas id="pattern"></canvas>
+	<div class="debug">
+		<canvas id="pattern"></canvas>
+		<div id="disasm"></div>
+		<div id="register"></div>
+		<div id="flagDiv"></div>
+	</div>
 </body>
 
 </html>

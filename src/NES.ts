@@ -37,8 +37,9 @@ export class NES {
 	}
 
 	/**更新调色板信息 */
-	UpdatePattern(canvas: HTMLCanvasElement) {
-		this.bus.debug.SetPatternCanvas(canvas);
-		this.bus.debug.patternTable?.UpdatePattern();
+	SetDebug(option: { canvas: HTMLCanvasElement, disasm: HTMLDivElement, register: HTMLDivElement, flagDiv: HTMLDivElement }) {
+		this.bus.debug.SetPatternCanvas(option.canvas);
+		this.bus.debug.SetDisassemblerDiv(option);
 	}
+
 }

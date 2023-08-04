@@ -19,7 +19,7 @@ export class PatternTable {
 		this.bus = option.bus;
 	}
 
-	UpdatePattern() {
+	Update() {
 		let x = 0;
 		let y = 0;
 

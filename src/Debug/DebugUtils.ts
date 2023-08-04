@@ -19,7 +19,10 @@ export class DebugUtils {
 		this.patternTable = new PatternTable({ canvas, bus: this.bus });
 	}
 
-	SetDisassemblerDiv(div: HTMLDivElement) {
-		this.diassembler = new Disassembler({ div, bus: this.bus });
+	SetDisassemblerDiv(option: { disasm: HTMLDivElement, register: HTMLDivElement, flagDiv: HTMLDivElement }) {
+		// @ts-ignore
+		let temp: typeof option & { bus: Bus } = option;
+		temp.bus = this.bus;
+		this.diassembler = new Disassembler(temp);
 	}
 }

@@ -31,9 +31,14 @@ function OpenFileDialog(accept) {
 
 function Test() {
 	let canvas = document.getElementById("pattern");
-	nes.UpdatePattern(canvas);
+	let disasm = document.getElementById("disasm");
+	let register = document.getElementById("register");
+	let flagDiv = document.getElementById("flagDiv");
+	nes.SetDebug({ canvas, disasm, register, flagDiv });
 }
 
 function Step() {
+	nes.bus.debug.diassembler?.Update();
+	nes.bus.debug.patternTable?.Update();
 	nes.bus.cpu.Step();
 }

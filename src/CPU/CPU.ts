@@ -11,7 +11,7 @@ const NMI = 0xFFFA;
 const RESET = 0xFFFC;
 const IRQ = 0xFFFE;
 
-enum Flags {
+export enum Flags {
 	/**Bit:7 Negative/Sign (0=Positive, 1=Negative) */
 	FlagN = 7,
 	/**Bit:6 Overflow (0=No Overflow, 1=Overflow) */
@@ -92,6 +92,57 @@ export class CPU {
 		this.registers.a = this.registers.x = this.registers.y = 0;
 		this.registers.sp = 0xFF;
 	}
+
+	//#region 单步
+	Step() {
+		const opcode = this.bus.ReadByte(this.registers.pc++);
+		if (opcode === 0)
+			debugger;
+
+		const entry = OperationTable[opcode];
+		if (!entry) {
+			throw new Error(`Invalid opcode '${opcode}(0x${opcode.toString(16)})', pc: 0x${(this.registers.pc - 1).toString(16)}`);
+		}
+
+		if (entry.instruction === Instruction.INVALID) {
+			throw new Error(`Invalid opcode '${opcode}(0x${opcode.toString(16)})', pc: 0x${(this.registers.pc - 1).toString(16)}`);
+		}
+
+		const addrModeFunc = this.addressModeMap.get(entry.addressingMode);
+		if (!addrModeFunc) {
+			throw new Error(`Unsuppored addressing mode: ${AddressingMode[entry.addressingMode]}`);
+		}
+
+		addrModeFunc.call(this);
+		if (this.addrData.crossPage) {
+			this.cpuClock += entry.pageCycles;
+		}
+
+		const instrFunc = this.instructionMap.get(entry.instruction);
+		if (!instrFunc) {
+			throw new Error(`Unsupported instruction: ${Instruction[entry.instruction]}`);
+		}
+
+		instrFunc.call(this);
+		this.cpuClock += entry.cycles;
+
+		this.addrData.crossPage = false;
+		this.addrData.address = -1;
+		this.addrData.data = -1;
+	}
+	//#endregion 单步
+
+	//#region NMI
+	NMI() {
+		this.PushWord(this.registers.pc);
+		this.PushByte(this.registers.p);
+
+		this.SetFlag(Flags.FlagI, true);
+		this.registers.pc = this.bus.ReadWord(NMI);
+	}
+	//#endregion NMI
+
+	/***** private *****/
 
 	//#region 设定指令映射
 	private SetMap() {
@@ -181,45 +232,6 @@ export class CPU {
 		]);
 	}
 	//#endregion 设定指令映射
-
-	//#region 单步
-	Step() {
-		const opcode = this.bus.ReadByte(this.registers.pc++);
-		if (opcode === 0)
-			debugger;
-
-		const entry = OperationTable[opcode];
-		if (!entry) {
-			throw new Error(`Invalid opcode '${opcode}(0x${opcode.toString(16)})', pc: 0x${(this.registers.pc - 1).toString(16)}`);
-		}
-
-		if (entry.instruction === Instruction.INVALID) {
-			throw new Error(`Invalid opcode '${opcode}(0x${opcode.toString(16)})', pc: 0x${(this.registers.pc - 1).toString(16)}`);
-		}
-
-		const addrModeFunc = this.addressModeMap.get(entry.addressingMode);
-		if (!addrModeFunc) {
-			throw new Error(`Unsuppored addressing mode: ${AddressingMode[entry.addressingMode]}`);
-		}
-
-		addrModeFunc.call(this);
-		if (this.addrData.crossPage) {
-			this.cpuClock += entry.pageCycles;
-		}
-
-		const instrFunc = this.instructionMap.get(entry.instruction);
-		if (!instrFunc) {
-			throw new Error(`Unsupported instruction: ${Instruction[entry.instruction]}`);
-		}
-
-		instrFunc.call(this);
-		this.cpuClock += entry.cycles;
-
-		this.addrData.crossPage = false;
-		this.addrData.address = -1;
-		this.addrData.data = -1;
-	}
-	//#endregion 单步
 
 	//#region 操作
 	private PushWord(data: number) {
