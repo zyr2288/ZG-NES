@@ -12,7 +12,11 @@ export interface IMapper {
 	chrOffset: number[];
 
 	Initialization(option: { maxPrg: number }): void;
-	Write(address: number, value: number): void;
+
+	WritePRG(address: number, value: number): void;
+	WriteCHR(address: number, value: number): void;
+
+	PPUClockEvent?(scanLine: number, ppuCycle: number): void;
 }
 
 export class MapperLoader {

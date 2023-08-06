@@ -1,11 +1,12 @@
 {
 	"compilerOptions": {
 		"outDir": "./dist/",
+		"lib": ["ES6", "DOM"],
 		"strictNullChecks": true,
 		"strictPropertyInitialization": true,
 		"noImplicitAny": true,
 		"module": "ES6",
 		"target": "ES6",
-		"moduleResolution": "node",
+		"moduleResolution": "node"
 	}
 }

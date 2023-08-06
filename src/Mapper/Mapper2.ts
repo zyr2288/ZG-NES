@@ -10,15 +10,19 @@ export class Mapper2 implements IMapper {
 	chrOffset: number[] = [];
 
 	Initialization(option: { maxPrg: number }): void {
-		this.bus.rom.prgIndex = [0, 0, option.maxPrg, option.maxPrg];
+		this.bus.cartridge.prgIndex = [0, 0, option.maxPrg, option.maxPrg];
 		this.bus.ppu.useChrRam = true;
 	}
 
-	Write(address: number, value: number): void {
+	WritePRG(address: number, value: number): void {
 		if (address < 0x8000)
 			return;
 
-		this.bus.rom.prgIndex[0] = this.bus.rom.prgIndex[1] = value;
+		this.bus.cartridge.prgIndex[0] = this.bus.cartridge.prgIndex[1] = value;
+	}
+
+	WriteCHR(address: number, value: number): void {
+		
 	}
 
 }

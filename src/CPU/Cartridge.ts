@@ -3,7 +3,7 @@ import { MapperLoader } from "../Mapper/IMapper";
 import { Tile } from "../PPU/PPUBlock";
 import { Utils } from "../Utils";
 
-export class Rom {
+export class Cartridge {
 	private readonly bus: Bus;
 
 	useSRAM = false;
@@ -22,7 +22,7 @@ export class Rom {
 
 	constructor(bus: Bus) {
 		this.bus = bus;
-		this.bus.rom = this;
+		this.bus.cartridge = this;
 	}
 
 	//#region 载入文件

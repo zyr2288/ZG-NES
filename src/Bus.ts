@@ -1,5 +1,5 @@
 import { CPU } from "./CPU/CPU";
-import { Rom } from "./CPU/Rom";
+import { Cartridge } from "./CPU/Cartridge";
 import { DebugUtils } from "./Debug/DebugUtils";
 import { IMapper } from "./Mapper/IMapper";
 import { PPU } from "./PPU/PPU";
@@ -7,20 +7,36 @@ import { PPU } from "./PPU/PPU";
 export class Bus {
 
 	cpu!: CPU;
-	rom!: Rom;
+	cartridge!: Cartridge;
 	ppu!: PPU;
 	mapper!: IMapper;
 
 	debug!: DebugUtils;
+
+	private systemClockCount = 0;
+
+	Reset() {
+		this.cpu.Reset();
+		this.systemClockCount = 0;
+	}
+
+	Clock() {
+		this.ppu.Clock();
+		if (this.systemClockCount % 3 === 0) {
+			this.cpu.Clock();
+		}
+
+		this.systemClockCount++;
+	}
 
 	ReadByte(address: number) {
 		if (address < 0x2000)
 			return this.cpu.ram[address & 0x7FF];
 
 		if (address < 0x8000)
-			return this.rom.useSRAM ? 0 : this.cpu.sram[address & 0x1FFF];
+			return this.cartridge.useSRAM ? 0 : this.cpu.sram[address & 0x1FFF];
 
-		return this.rom.ReadPrgRom(address);
+		return this.cartridge.ReadPrgRom(address);
 	}
 
 	ReadWord(address: number) {
@@ -35,11 +51,11 @@ export class Bus {
 			return;
 		}
 
-		if (address < 0x8000 && this.rom.useSRAM) {
+		if (address < 0x8000 && this.cartridge.useSRAM) {
 			this.cpu.sram[address & 0x1FFF] = value;
 			return;
 		}
 
-		this.mapper.Write(address, value);
+		this.mapper.WritePRG(address, value);
 	}
 }

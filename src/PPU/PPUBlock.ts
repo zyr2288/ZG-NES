@@ -7,7 +7,23 @@ export class Sprite {
 	hFlip = false;
 	vFlip = false;
 	hideInBg = false;
-	colorIndex = 0;
+	paletteIndex = 0;
+
+	isZero = false;
+	rendered = false;
+
+	SetValue(data: Uint8Array, index: number) {
+		this.y = data[index++];
+		this.tileIndex = data[index++];
+
+		let value = data[index++];
+		this.paletteIndex = value & 3;
+		this.hideInBg = (value & 0x20) !== 0;
+		this.hFlip = (value & 0x40) !== 0;
+		this.vFlip = (value & 0x80) !== 0;
+
+		this.x = data[index++];
+	}
 }
 
 export class Tile {

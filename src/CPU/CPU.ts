@@ -53,7 +53,8 @@ export class CPU {
 
 	breaks = { nmi: 0, irq: 0, reset: 0 };
 
-	cpuClock: number = 0;
+	cycle = 0;
+	clock = 0;
 
 	flags: boolean[] = [false, false, false, false, false, false, false, false];
 
@@ -74,27 +75,34 @@ export class CPU {
 	Reset() {
 		this.flags[Flags.FlagN] = false;
 		this.flags[Flags.FlagV] = false;
-		this.flags[Flags.FlagU] = true;
+		this.flags[Flags.FlagU] = false;
 		this.flags[Flags.FlagB] = false;
 		this.flags[Flags.FlagD] = false;
 		this.flags[Flags.FlagI] = true;
 		this.flags[Flags.FlagZ] = false;
 		this.flags[Flags.FlagC] = false;
 
-		this.registers.p = 0x24;
+		this.registers.p = 0x34;
 
-		this.cpuClock = 0;
+		this.cycle = 0;
+		this.cycle = 0;
 
 		this.breaks.irq = this.bus.ReadWord(0xFFFE);
 		this.breaks.nmi = this.bus.ReadWord(0xFFFA);
 		this.registers.pc = this.breaks.reset = this.bus.ReadWord(0xFFFC);
 
 		this.registers.a = this.registers.x = this.registers.y = 0;
-		this.registers.sp = 0xFF;
+		this.registers.sp = 0xFD;
 	}
 
 	//#region 单步
-	Step() {
+	Clock() {
+		this.clock++;
+		if (this.cycle !== 0) {
+			this.cycle--;
+			return;
+		}
+
 		const opcode = this.bus.ReadByte(this.registers.pc++);
 		if (opcode === 0)
 			debugger;
@@ -115,7 +123,7 @@ export class CPU {
 
 		addrModeFunc.call(this);
 		if (this.addrData.crossPage) {
-			this.cpuClock += entry.pageCycles;
+			this.cycle += entry.pageCycles;
 		}
 
 		const instrFunc = this.instructionMap.get(entry.instruction);
@@ -124,7 +132,8 @@ export class CPU {
 		}
 
 		instrFunc.call(this);
-		this.cpuClock += entry.cycles;
+		this.cycle += entry.cycles;
+		this.registers.pc &= 0xFFFF;
 
 		this.addrData.crossPage = false;
 		this.addrData.address = -1;
@@ -286,7 +295,7 @@ export class CPU {
 	}
 
 	private AbsoluteX() {
-		this.addrData.temp = this.bus.ReadWord(this.registers.pc);
+		this.addrData.temp = this.bus.ReadWord(this.registers.pc) & 0xFFFF;
 		this.registers.pc += 2;
 		this.addrData.address = this.addrData.temp + this.registers.x;
 		this.CrossPage();
@@ -391,9 +400,9 @@ export class CPU {
 
 	private BCC(): void {
 		if (!this.IsFlagSet(Flags.FlagC)) {
-			this.cpuClock++;
+			this.cycle++;
 			if (this.CrossPageMatch(this.registers.pc, this.addrData.address)) {
-				this.cpuClock++;
+				this.cycle++;
 			}
 
 			this.registers.pc = this.addrData.address;
@@ -402,9 +411,9 @@ export class CPU {
 
 	private BCS(): void {
 		if (this.IsFlagSet(Flags.FlagC)) {
-			this.cpuClock++;
+			this.cycle++;
 			if (this.CrossPageMatch(this.registers.pc, this.addrData.address)) {
-				this.cpuClock++;
+				this.cycle++;
 			}
 
 			this.registers.pc = this.addrData.address;
@@ -413,9 +422,9 @@ export class CPU {
 
 	private BEQ(): void {
 		if (this.IsFlagSet(Flags.FlagZ)) {
-			this.cpuClock++;
+			this.cycle++;
 			if (this.CrossPageMatch(this.registers.pc, this.addrData.address)) {
-				this.cpuClock++;
+				this.cycle++;
 			}
 
 			this.registers.pc = this.addrData.address;
@@ -432,9 +441,9 @@ export class CPU {
 
 	private BMI(): void {
 		if (this.IsFlagSet(Flags.FlagN)) {
-			this.cpuClock++;
+			this.cycle++;
 			if (this.CrossPageMatch(this.registers.pc, this.addrData.address)) {
-				this.cpuClock++;
+				this.cycle++;
 			}
 
 			this.registers.pc = this.addrData.address;
@@ -443,9 +452,9 @@ export class CPU {
 
 	private BNE(): void {
 		if (!this.IsFlagSet(Flags.FlagZ)) {
-			this.cpuClock++;
+			this.cycle++;
 			if (this.CrossPageMatch(this.registers.pc, this.addrData.address)) {
-				this.cpuClock++;
+				this.cycle++;
 			}
 
 			this.registers.pc = this.addrData.address;
@@ -454,9 +463,9 @@ export class CPU {
 
 	private BPL(): void {
 		if (!this.IsFlagSet(Flags.FlagN)) {
-			this.cpuClock++;
+			this.cycle++;
 			if (this.CrossPageMatch(this.registers.pc, this.addrData.address)) {
-				this.cpuClock++;
+				this.cycle++;
 			}
 
 			this.registers.pc = this.addrData.address;
@@ -474,9 +483,9 @@ export class CPU {
 
 	private BVC(): void {
 		if (!this.IsFlagSet(Flags.FlagV)) {
-			this.cpuClock++;
+			this.cycle++;
 			if (this.CrossPageMatch(this.registers.pc, this.addrData.address)) {
-				this.cpuClock++;
+				this.cycle++;
 			}
 
 			this.registers.pc = this.addrData.address;
@@ -485,9 +494,9 @@ export class CPU {
 
 	private BVS(): void {
 		if (this.IsFlagSet(Flags.FlagV)) {
-			this.cpuClock++;
+			this.cycle++;
 			if (this.CrossPageMatch(this.registers.pc, this.addrData.address)) {
-				this.cpuClock++;
+				this.cycle++;
 			}
 
 			this.registers.pc = this.addrData.address;

@@ -16,9 +16,11 @@ export class Mapper0 implements IMapper {
 	}
 
 	Initialization(option: { maxPrg: number }): void {
-		this.bus.rom.prgIndex = [0, 0, 1, 1];
-		this.bus.rom.chrIndex = [0, 0, 0, 0, 1, 1, 1, 1];
+		this.bus.cartridge.prgIndex = [0, 0, 1, 1];
+		this.bus.cartridge.chrIndex = [0, 0, 0, 0, 1, 1, 1, 1];
 	}
 
-	Write(address: number, value: number) { }
+	WritePRG(address: number, value: number) { }
+
+	WriteCHR(address: number, value: number): void { }
 }

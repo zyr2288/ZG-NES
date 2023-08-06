@@ -1,9 +1,9 @@
 import { Bus } from "../Bus";
 import { Sprite, Tile } from "./PPUBlock";
 
-const SpriteCount = 64;
+const AllSpriteCount = 64;
 /**一行最多显示精灵数，-1为无限制 */
-const LineMaxSprite = 8;
+// const LineMaxSprite = 8;
 const BaseNametableAddress = [0x2000, 0x2400, 0x2800, 0x2C00];
 
 export enum MirrorType {
@@ -18,24 +18,24 @@ export class PPU {
 
 	oamAddress = 0;
 	oamMemory = new Uint8Array(256);
+	allSprite: Sprite[] = [];
+	showSprite = new Int8Array(AllSpriteCount);
 
-	/**是否显示精灵 */
-	showSprite = false;
 	/**扫描线 */
 	scanLine = 0;
 	/**PPU周期 */
 	cycle = 0;
 	mirrorType = MirrorType.FourScreen;
 
-
 	nameTableMap = [0, 0, 0, 0];
 	nameTableData: Uint8Array[] = [];
 
 	useChrRam = false;
-	colorTable = new Uint8Array(0x20);
+	paletteTable = new Uint8Array(0x20);
 	/**256 * 2个 Tile */
 	chrRam: Tile[] = [];
 
+	//#region 2000属性
 	/**Controller ($2000) > write */
 	private ppuCTRL = {
 		/**Bit 0-1   Base nametable address (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00) */
@@ -52,13 +52,10 @@ export class PPU {
 		ppuMSSelect: false,
 		/**Generate an NMI at the start of the vertical blanking interval (0: off; 1: on) */
 		nmiOpen: false,
-
-		/**BIT 0   Add 256 to the X scroll position */
-		x: 0,
-		/**BIT 1   Add 240 to the Y scroll position*/
-		y: 0
 	}
+	//#endregion 2000属性
 
+	//#region 2001属性
 	/**Mask ($2001) > write */
 	private ppuMask = {
 		/**Bit 0   Greyscale (0: normal color, 1: produce a greyscale display) */
@@ -78,7 +75,9 @@ export class PPU {
 		/**Emphasize blue */
 		emphasizeBlue: false,
 	}
+	//#endregion 2001属性
 
+	//#region 2002属性
 	/**Status ($2002) < read */
 	private ppuStatus = {
 		verticalBlankStarted: false,
@@ -92,10 +91,25 @@ export class PPU {
 		if (this.ppuStatus.spriteOverflow) result |= 0x20;
 		return result;
 	}
+	//#endregion 2002属性
 
 	private ppuAddress = 0;
-	private ppuWriteAddressHight = true;
 	private ppuReadBuffer = 0;
+	/**PPU internal registers */
+	/**https://www.nesdev.org/wiki/PPU_scrolling */
+	private register = {
+		/**Current VRAM address (15 bits) 当前VRAM 地址，15位 */
+		v: 0,
+		/**Temporary VRAM address (15 bits); can also be thought of as the address of the top left onscreen tile. */
+		t: 0,
+		/**Fine X scroll (3 bits) X坐标卷轴 */
+		x: 0,
+		/**First or second write toggle (1 bit) 写入第一次或者是第二次的触发器*/
+		w: 0
+	};
+
+	private nmiDelay = -1;
+
 	private readonly bus: Bus;
 
 	constructor(bus: Bus) {
@@ -105,6 +119,12 @@ export class PPU {
 		for (let i = 0; i < this.nameTableData.length; i++) {
 			this.nameTableData[i] = new Uint8Array(0x400);
 		}
+	}
+
+	Reset() {
+		this.Write_2000(0);
+		this.Write_2001(0);
+		this.showSprite.fill(-1);
 	}
 
 	//#region 写入
@@ -118,14 +138,22 @@ export class PPU {
 				this.Write_2001(value);
 				break;
 			case 0x2003:
+				this.oamAddress = value;
+				this.oamMemory[this.oamAddress & 0xFF] = value;
+				this.oamAddress++;
 				break;
 			case 0x2004:
+				break;
+			case 0x2005:
+				this.Write_2005(value);
 				break;
 			case 0x2006:
 				this.Write_2006(value);
 				break;
 			case 0x2007:
 				this.Write_2007(value);
+				break;
+			case 0x4014:
 				break;
 		}
 	}
@@ -137,9 +165,10 @@ export class PPU {
 		let data: number = -1;
 		switch (address) {
 			case 0x2002:
-				data = this.ppuStatusValue | (this.ppuReadBuffer & 0x1F);
-				this.ppuStatus.verticalBlankStarted = false;
-				this.ppuWriteAddressHight = true;
+				data = this.Read_2002();
+				break;
+			case 0x2004:
+				data = this.oamMemory[this.oamAddress];
 				break;
 			case 0x2007:
 				data = this.ppuReadBuffer;
@@ -179,9 +208,37 @@ export class PPU {
 	}
 	//#endregion 设定镜像
 
+	Clock() {
+		if (this.scanLine === -1 && this.cycle === 1) {
+			this.ppuStatus.verticalBlankStarted = false;
+		}
+
+		if (this.scanLine === 241 && this.cycle === 1) {
+			this.ppuStatus.verticalBlankStarted = true;
+		}
+
+		if (!this.ppuMask.showBG && !this.ppuMask.showSprite)
+			return;
+
+		if (0 <= this.scanLine && this.scanLine <= 239) {
+			if (this.cycle === 1) {
+
+			}
+
+			if (this.cycle === 65) {
+				this.GetSprites();
+			}
+		}
+
+		this.Cycle();
+	}
+
+	/***** private *****/
+
 	//#region 写入各个接口
 	private Write_2000(value: number) {
-		this.ppuCTRL.baseNametable = BaseNametableAddress[value & 3];
+		let temp = value & 3;
+		this.ppuCTRL.baseNametable = BaseNametableAddress[temp];
 		this.ppuCTRL.vramAddIncrement = (value & 0x4) === 0 ? 1 : 32;
 		this.ppuCTRL.spritePattern = (value & 0x8) === 0 ? 0 : 0x1000;
 		this.ppuCTRL.bgPattern = (value & 0x10) === 0 ? 0 : 0x1000;
@@ -189,8 +246,7 @@ export class PPU {
 		this.ppuCTRL.ppuMSSelect = (value & 0x40) !== 0;
 		this.ppuCTRL.nmiOpen = (value & 0x80) !== 0;
 
-		this.ppuCTRL.x = (value & 0x1) === 0 ? 0 : 256;
-		this.ppuCTRL.y = (value & 0x2) === 0 ? 0 : 240;
+		this.register.t = (this.register.t & 0xF3FF) | (temp << 10);
 	}
 
 	private Write_2001(value: number) {
@@ -204,53 +260,133 @@ export class PPU {
 		this.ppuMask.emphasizeBlue = (value & 0x80) !== 0;
 	}
 
-	private Write_2006(value: number) {
-		if (this.ppuWriteAddressHight) {
-			this.ppuAddress = (this.ppuAddress & 0xFF) | (value << 8);
+	private Write_2005(value: number) {
+		if (this.register.w) {
+			this.register.t = (this.register.t & 0xFFE0) | (value >> 3);
+			this.register.x = value & 0x07;
 		} else {
-			this.ppuAddress = (this.ppuAddress & 0xFF00) | value;
+			this.register.t = (this.register.t & 0x0C1F) | (value & 0x07) << 12 | (value & 0xF8) << 2;
 		}
+
+		this.register.w ^= 1;
+	}
+
+	private Write_2006(value: number) {
+		if (this.register.w === 0) {
+			this.register.t = (this.register.t & 0x80FF) | (value & 0x3F) << 8;
+		} else {
+			this.register.t = (this.register.t & 0xFF00) | value;
+			this.register.v = this.register.t;
+		}
+		this.register.w ^= 1;
 	}
 
 	private Write_2007(value: number) {
-		if (this.ppuAddress < 0x2000) {
-			if (this.chrRam)
-				this.chrRam[this.ppuAddress >> 4].SetData(this.ppuAddress & 0xF, value);
-		} else if (this.ppuAddress >= 0x3F00) {
-			let address = this.ppuAddress & 0x1F;
-			if (address === 0)
-				this.colorTable[0x00] = this.colorTable[0x04] = this.colorTable[0x08] = this.colorTable[0x0C] = value;
-			else if (address == 0x10)
-				this.colorTable[0x10] = this.colorTable[0x14] = this.colorTable[0x18] = this.colorTable[0x1C] = value;
-			else
-				this.colorTable[address] = value;
-		} else {
-			let address = this.ppuAddress & 0x2FFF;
-			let index = this.nameTableMap[(address >> 8) & 3];
-			address = this.ppuAddress & 0x3FF;
-			this.nameTableData[index][address] = value;
-		}
-		this.ppuAddress += this.ppuCTRL.vramAddIncrement;
+		this.WriteByte(this.register.v, value);
+		this.register.v += this.ppuCTRL.vramAddIncrement;
+	}
+
+	private Write_4014(value: number) {
+
 	}
 	//#endregion 写入各个接口
 
-	private Clock() {
-		if (this.scanLine === -1 && this.cycle === 1) {
-			this.ppuStatus.verticalBlankStarted = false;
+	//#region 读取各个接口
+	private Read_2002() {
+		this.register.w = 0;
+		this.ppuStatus.verticalBlankStarted = false;
+		return this.ppuStatusValue | (this.ppuReadBuffer & 0x1F);
+	}
+
+	private Read_2007() {
+		let data = this.ReadByte(this.register.v)!;
+		if (this.register.v < 0x3EFF) {
+			let temp = this.ppuReadBuffer;
+			this.ppuReadBuffer = data;
+			data = temp;
+		} else {
+			this.ppuReadBuffer = this.ReadByte(this.register.v)!;
+		}
+
+		this.register.v += this.ppuCTRL.vramAddIncrement;
+		this.register.v &= 0x7FFF;
+		return data;
+	}
+	//#endregion 读取各个接口
+
+	//#region 执行一个Cycle
+	private Cycle() {
+		if (this.ppuStatus.verticalBlankStarted && this.ppuCTRL.nmiOpen) {
+			this.bus.cpu.NMI();
+		}
+
+		this.cycle++;
+		if (this.cycle > 340) {
+			this.cycle = 0;
+			this.scanLine++;
+			if (this.scanLine > 261) {
+				this.scanLine = 0;
+			}
 		}
 
 		if (this.scanLine === 241 && this.cycle === 1) {
 			this.ppuStatus.verticalBlankStarted = true;
+
+			if (this.ppuCTRL.nmiOpen) {
+				this.nmiDelay = 15;
+			}
+		}
+
+		if (this.scanLine === 261 && this.cycle === 1) {
+			this.ppuStatus.verticalBlankStarted = false;
+			this.ppuStatus.spriteZeroHit = false;
+			this.ppuStatus.spriteOverflow = false;
+		}
+
+		if (this.ppuMask.showBG || this.ppuMask.showSprite) {
+			this.bus.mapper.PPUClockEvent?.(this.scanLine, this.cycle);
+		}
+	}
+	//#endregion 执行一个Cycle
+
+	private DMACopy() {
+		let index;
+		for (let i = 0; i < 256; i++) {
+			this.oamMemory[i] = this.bus.cpu.ram[i + this.oamAddress];
+			if ((i & 3) === 0) {
+				index = i / 4;
+				let sprite = this.allSprite[i / 4];
+				sprite.y = this.oamMemory[i];
+			}
 		}
 	}
 
-	private DMACopy() {
-		for (let i = 0; i < 256; i++)
-			this.oamMemory[i] = this.bus.cpu.ram[i + this.oamAddress];
+	private GetSprites() {
+		if (!this.ppuMask.showSprite)
+			return;
+
+		let spriteCount = 0;
+		for (let i = 0; i < AllSpriteCount; i++) {
+			let sprite = this.allSprite[i];
+			let yOffset = sprite.y + this.ppuCTRL.spriteSize;
+			if (sprite.rendered || sprite.y > this.scanLine || yOffset <= this.scanLine)
+				continue;
+
+			if (spriteCount === 8) {
+				this.ppuStatus.spriteOverflow = true;
+				// break;
+			}
+
+			this.showSprite[spriteCount++] = i;
+			if (yOffset === this.scanLine - 1)
+				sprite.rendered = true;
+		}
+		if (spriteCount !== AllSpriteCount + 1)
+			this.showSprite[spriteCount] = -1;
 	}
 
-	private SetSprites() {
-		if (!this.showSprite)
+	private RenderSprite() {
+		if (!this.ppuMask.showSprite)
 			return;
 
 
@@ -258,5 +394,43 @@ export class PPU {
 
 	private ClearSecondaryOam() {
 
+	}
+
+	private RenderPixel() {
+		const x = this.cycle - 1;
+		const y = this.scanLine;
+
+	}
+
+	private ReadByte(address: number) {
+		address &= 0x3FFF;
+
+		if (address < 0x2000) {
+
+		} else if (address < 0x3000) {
+
+		} else if (address < 0x3F00) {
+
+		} else {
+			address &= 0x1F
+			return this.paletteTable[address];
+		}
+	}
+
+	private WriteByte(address: number, value: number) {
+		address &= 0x3FFF;
+		if (address < 0x2000) {
+			this.bus.mapper.WriteCHR(address, value);
+		} else if (address < 0x3000) {
+
+		} else if (address < 0x3F00) {
+
+		} else {
+			address &= 0x1F;
+			if ((address & 3) === 0)
+				this.paletteTable[0x00] = value;
+			else
+				this.paletteTable[address] = value;
+		}
 	}
 }

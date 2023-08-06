@@ -1,6 +1,6 @@
 import { Bus } from "./Bus";
 import { CPU } from "./CPU/CPU";
-import { Rom } from "./CPU/Rom";
+import { Cartridge } from "./CPU/Cartridge";
 import { DebugUtils } from "./Debug/DebugUtils";
 import { PPU } from "./PPU/PPU";
 
@@ -16,7 +16,7 @@ export class NES {
 	constructor() {
 		this.bus = new Bus();
 		new CPU(this.bus);
-		new Rom(this.bus);
+		new Cartridge(this.bus);
 		new PPU(this.bus);
 		new DebugUtils(this.bus);
 	}
@@ -32,7 +32,7 @@ export class NES {
 
 	LoadFile(data: ArrayBuffer) {
 		let temp = new Uint8Array(data);
-		this.bus.rom.LoadRom(temp);
+		this.bus.cartridge.LoadRom(temp);
 		this.bus.cpu.Reset();
 	}
 

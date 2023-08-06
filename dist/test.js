@@ -40,5 +40,5 @@ function Test() {
 function Step() {
 	nes.bus.debug.diassembler?.Update();
 	nes.bus.debug.patternTable?.Update();
-	nes.bus.cpu.Step();
+	nes.bus.Clock();
 }

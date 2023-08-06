@@ -24,13 +24,13 @@ export class PatternTable {
 		let y = 0;
 
 		let colors: string[] = [];
-		for (let i = 0; i < this.bus.ppu.colorTable.length; i++) {
-			let index = this.bus.ppu.colorTable[i];
+		for (let i = 0; i < this.bus.ppu.paletteTable.length; i++) {
+			let index = this.bus.ppu.paletteTable[i];
 			colors[i] = NesColorsStr[index];
 		}
 
 		for (let i = 0; i < 0x100; i++) {
-			let tile = this.bus.rom.ReadChrRom(i, true);
+			let tile = this.bus.cartridge.ReadChrRom(i, true);
 			this.DrawTiles(x, y, PixWidth, tile, colors);
 			x += PixWidth * 8;
 			if ((i & 0xF) === 0xF) {
@@ -43,7 +43,7 @@ export class PatternTable {
 		x = DefaultX;
 		y = 0;
 		for (let i = 0; i < 0x100; i++) {
-			let tile = this.bus.rom.ReadChrRom(i, false);
+			let tile = this.bus.cartridge.ReadChrRom(i, false);
 			this.DrawTiles(x, y, PixWidth, tile, colors);
 			x += PixWidth * 8;
 			if ((i & 0xF) === 0xF) {
@@ -54,8 +54,8 @@ export class PatternTable {
 
 		x = 0;
 		y = PixWidth * 8 * 16;
-		for (let i = 0; i < this.bus.ppu.colorTable.length; i++) {
-			let index = this.bus.ppu.colorTable[i];
+		for (let i = 0; i < this.bus.ppu.paletteTable.length; i++) {
+			let index = this.bus.ppu.paletteTable[i];
 			this.DrawColor(x, y, ColorTableWidth, NesColorsStr[index]);
 			x += ColorTableWidth;
 			if ((i & 0xF) === 0xF) {
