@@ -417,6 +417,7 @@ export class PPU {
 	}
 	//#endregion 执行一个Cycle
 
+	//#region DMA复制
 	private DMACopy() {
 		let index;
 		for (let i = 0; i < 256; i++) {
@@ -428,6 +429,7 @@ export class PPU {
 			}
 		}
 	}
+	//#endregion DMA复制
 
 	private GetSprites() {
 		if (!this.ppuMask.showSprite)
@@ -475,10 +477,10 @@ export class PPU {
 		address &= 0x3FFF;
 		if (address < 0x2000) {
 			return this.bus.cartridge.mapper.ReadCHR(address);
-		} else if (address < 0x3000) {
-
 		} else if (address < 0x3F00) {
-
+			address &= 0x2FFF
+			const index = this.nameTableMap[(address >> 10) & 3];
+			return this.nameTableData[index][address];
 		} else {
 			address &= 0x1F
 			return this.paletteTable[address];
@@ -502,4 +504,10 @@ export class PPU {
 		}
 	}
 	//#endregion 读取写入
+
+	private fetchNameTable() {
+		const address = 0x2000 | (this.register.v & 0x0FFF);
+		this.latchs.nameTable = this.ReadByte(address);
+	  }
+
 }
