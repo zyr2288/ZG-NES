@@ -21,12 +21,15 @@ export class Bus {
 	}
 
 	Clock() {
-		this.ppu.Clock();
-		if (this.systemClockCount % 3 === 0) {
-			this.cpu.Clock();
-		}
+		while (true) {
+			this.ppu.Clock();
+			if (this.systemClockCount % 3 === 0) {
+				if (this.cpu.Clock())
+					break;
+			}
 
-		this.systemClockCount++;
+			this.systemClockCount++;
+		}
 	}
 
 	ReadByte(address: number) {
@@ -36,7 +39,7 @@ export class Bus {
 		if (address < 0x8000)
 			return this.cartridge.useSRAM ? 0 : this.cpu.sram[address & 0x1FFF];
 
-		return this.cartridge.ReadPrgRom(address);
+		return this.cartridge.mapper.ReadPRG(address);
 	}
 
 	ReadWord(address: number) {

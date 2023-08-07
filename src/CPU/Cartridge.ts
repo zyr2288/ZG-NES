@@ -1,5 +1,5 @@
 import { Bus } from "../Bus";
-import { MapperLoader } from "../Mapper/IMapper";
+import { IMapper, MapperLoader } from "../Mapper/IMapper";
 import { Tile } from "../PPU/PPUBlock";
 import { Utils } from "../Utils";
 
@@ -10,8 +10,9 @@ export class Cartridge {
 	screenMiror = false;
 
 	/**PRG对应的索引， */
-	prgIndex = [0, 0, 0, 0];
-	chrIndex = [0, 0, 0, 0, 0, 0, 0, 0];
+	prgIndex: number[] = [];
+	/**CHR对应的索引， */
+	chrIndex: number[] = [];
 
 	prgCount = 0;
 	prgBanks: Uint8Array[] = [];
@@ -19,6 +20,8 @@ export class Cartridge {
 	chrCount = 0;
 	chrRam = false;
 	chrBanks: Tile[][] = [];
+
+	mapper!: IMapper;
 
 	constructor(bus: Bus) {
 		this.bus = bus;
@@ -48,7 +51,7 @@ export class Cartridge {
 		if (!mapper)
 			throw `不支持 Mapper${tempNum}`;
 
-		this.bus.mapper = new mapper(this.bus);
+		this.mapper = new mapper(this.bus);
 
 		//拷贝PRG-ROM次数
 		tempNum = data[4] * 0x4000 / this.bus.mapper.prgSize;
@@ -97,24 +100,5 @@ export class Cartridge {
 		return true;
 	}
 	//#endregion 载入文件
-
-	//#region 读取CHR-ROM内容
-	ReadChrRom(tileNum: number, isLeft: boolean) {
-		let temp = tileNum >> 6;
-		let select = (isLeft ? 0 : 4) + temp;
-		tileNum -= this.bus.mapper.chrOffset[select];
-		return this.chrBanks[this.chrIndex[select]][tileNum];
-	}
-	//#endregion 读取CHR-ROM内容
-
-	//#region 读取PRG-ROM内容
-	ReadPrgRom(address: number) {
-		let tempAdd = (address >> 13) & 3;
-		let index = this.prgIndex[tempAdd];
-		address -= this.bus.mapper.prgOffset[tempAdd];
-		let result = this.prgBanks[index][address];
-		return result;
-	}
-	//#endregion 读取PRG-ROM内容
 
 }

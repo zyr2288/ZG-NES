@@ -30,10 +30,7 @@ export class PPU {
 	nameTableMap = [0, 0, 0, 0];
 	nameTableData: Uint8Array[] = [];
 
-	useChrRam = false;
 	paletteTable = new Uint8Array(0x20);
-	/**256 * 2个 Tile */
-	chrRam: Tile[] = [];
 
 	//#region 2000属性
 	/**Controller ($2000) > write */
@@ -93,7 +90,6 @@ export class PPU {
 	}
 	//#endregion 2002属性
 
-	private ppuAddress = 0;
 	private ppuReadBuffer = 0;
 	/**PPU internal registers */
 	/**https://www.nesdev.org/wiki/PPU_scrolling */
@@ -208,30 +204,102 @@ export class PPU {
 	}
 	//#endregion 设定镜像
 
+	//#region PPU执行一个周期
 	Clock() {
-		if (this.scanLine === -1 && this.cycle === 1) {
-			this.ppuStatus.verticalBlankStarted = false;
-		}
-
-		if (this.scanLine === 241 && this.cycle === 1) {
-			this.ppuStatus.verticalBlankStarted = true;
-		}
-
-		if (!this.ppuMask.showBG && !this.ppuMask.showSprite)
-			return;
-
-		if (0 <= this.scanLine && this.scanLine <= 239) {
-			if (this.cycle === 1) {
-
-			}
-
-			if (this.cycle === 65) {
-				this.GetSprites();
-			}
-		}
+		// For odd frames, the cycle at the end of the scanline is skipped (this is done internally by jumping directly from (339,261) to (0,0)
+		// However, this behavior can be bypassed by keeping rendering disabled until after this scanline has passed
+		// if (this.scanLine === 261 && this.cycle === 339 && this.frame & 0x01 && (this.ppuMask.showBG || this.ppuMask.showSprite)) {
+		// 	this.Cycle();
+		// }
 
 		this.Cycle();
+
+		if (!this.ppuMask.showBG && !this.ppuMask.showSprite) {
+			return;
+		}
+
+		// Scanline 0 - 239: visible lines
+		if (0 <= this.scanLine && this.scanLine <= 239) {
+			// Cycle 0: do nothing
+
+			// Cycle 1 - 64: Clear secondary OAM
+			if (1 === this.cycle) {
+				// this.clearSecondaryOam();
+			}
+
+			// Cycle 65 - 256: Sprite evaluation for next scanline
+			if (65 === this.cycle) {
+				// this.evalSprite();
+			}
+
+			// Cycle 1 - 256: fetch NT, AT, tile
+			if (1 <= this.cycle && this.cycle <= 256) {
+				// this.shiftBackground();
+				// this.renderPixel();
+				// this.fetchTileRelatedData();
+			}
+
+			// Cycle 256
+			if (this.cycle === 256) {
+				// this.incrementVerticalPosition();
+			}
+
+			// Cycle 257
+			if (this.cycle === 257) {
+				// this.copyHorizontalBits();
+			}
+
+			// Cycle 257 - 320: Sprite fetches
+			if (this.cycle === 257) {
+				// this.fetchSprite();
+			}
+
+			// Cycle 321 - 336: fetch NT, AT, tile
+			if (321 <= this.cycle && this.cycle <= 336) {
+				// this.shiftBackground();
+				// this.fetchTileRelatedData();
+			}
+
+			// Cycle 337 - 340: unused NT fetches
+		}
+
+		// Scanline 240 - 260: Do nothing
+
+		// Scanline 261: pre render line
+		if (this.scanLine === 261) {
+			// Cycle 0: do nothing
+
+			// Cycle 1 - 256: fetch NT, AT, tile
+			if (1 <= this.cycle && this.cycle <= 256) {
+				// this.shiftBackground();
+				// this.fetchTileRelatedData();
+			}
+
+			// Cycle 256
+			if (this.cycle === 256) {
+				// this.incrementVerticalPosition();
+			}
+
+			// Cycle 257
+			if (this.cycle === 257) {
+				// this.copyHorizontalBits();
+			}
+
+			// Cycle 257 - 320: do nothing
+
+			// Cycle 280
+			if (this.cycle === 280) {
+				// this.copyVerticalBits();
+			}
+
+			// Cycle 321 - 336: fetch NT, AT, tile
+			if (321 <= this.cycle && this.cycle <= 336) {
+				// this.shiftBackground();
+				// this.fetchTileRelatedData();
+			}
+		}
 	}
+	//#endregion PPU执行一个周期
 
 	/***** private *****/
 
@@ -316,7 +384,7 @@ export class PPU {
 
 	//#region 执行一个Cycle
 	private Cycle() {
-		if (this.ppuStatus.verticalBlankStarted && this.ppuCTRL.nmiOpen) {
+		if (this.ppuStatus.verticalBlankStarted && this.ppuCTRL.nmiOpen && this.nmiDelay-- === 0) {
 			this.bus.cpu.NMI();
 		}
 
@@ -402,11 +470,11 @@ export class PPU {
 
 	}
 
+	//#region 读取写入
 	private ReadByte(address: number) {
 		address &= 0x3FFF;
-
 		if (address < 0x2000) {
-
+			return this.bus.cartridge.mapper.ReadCHR(address);
 		} else if (address < 0x3000) {
 
 		} else if (address < 0x3F00) {
@@ -433,4 +501,5 @@ export class PPU {
 				this.paletteTable[address] = value;
 		}
 	}
+	//#endregion 读取写入
 }

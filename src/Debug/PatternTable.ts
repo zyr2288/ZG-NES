@@ -30,7 +30,7 @@ export class PatternTable {
 		}
 
 		for (let i = 0; i < 0x100; i++) {
-			let tile = this.bus.cartridge.ReadChrRom(i, true);
+			let tile = this.bus.cartridge.mapper.GetCHRTile(i);
 			this.DrawTiles(x, y, PixWidth, tile, colors);
 			x += PixWidth * 8;
 			if ((i & 0xF) === 0xF) {
@@ -43,7 +43,7 @@ export class PatternTable {
 		x = DefaultX;
 		y = 0;
 		for (let i = 0; i < 0x100; i++) {
-			let tile = this.bus.cartridge.ReadChrRom(i, false);
+			let tile = this.bus.cartridge.mapper.GetCHRTile(i + 0x100);
 			this.DrawTiles(x, y, PixWidth, tile, colors);
 			x += PixWidth * 8;
 			if ((i & 0xF) === 0xF) {

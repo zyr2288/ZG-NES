@@ -72,6 +72,7 @@ export class CPU {
 		this.SetMap();
 	}
 
+	//#region 重置
 	Reset() {
 		this.flags[Flags.FlagN] = false;
 		this.flags[Flags.FlagV] = false;
@@ -94,13 +95,14 @@ export class CPU {
 		this.registers.a = this.registers.x = this.registers.y = 0;
 		this.registers.sp = 0xFD;
 	}
+	//#endregion 重置
 
 	//#region 单步
 	Clock() {
 		this.clock++;
 		if (this.cycle !== 0) {
 			this.cycle--;
-			return;
+			return false;
 		}
 
 		const opcode = this.bus.ReadByte(this.registers.pc++);
@@ -138,6 +140,7 @@ export class CPU {
 		this.addrData.crossPage = false;
 		this.addrData.address = -1;
 		this.addrData.data = -1;
+		return true;
 	}
 	//#endregion 单步
 
