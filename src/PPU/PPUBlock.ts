@@ -1,6 +1,7 @@
 import { BitValueRev } from "../NESConst";
 
 export class Sprite {
+
 	x = 0;
 	y = 0;
 	tileIndex = 0;
@@ -10,9 +11,9 @@ export class Sprite {
 	paletteIndex = 0;
 
 	isZero = false;
-	rendered = false;
+	useble = false;
 
-	SetValue(data: Uint8Array, index: number) {
+	SetData(data: Uint8Array, index: number, isZero: boolean) {
 		this.y = data[index++];
 		this.tileIndex = data[index++];
 
@@ -23,7 +24,20 @@ export class Sprite {
 		this.vFlip = (value & 0x80) !== 0;
 
 		this.x = data[index++];
+		this.isZero = isZero;
+		this.useble = true;
 	}
+
+	// constructor(data1_y: number, data2_index: number, data3_attr: number, data4_x: number, isZero = false) {
+	// 	this.x = data4_x;
+	// 	this.y = data1_y;
+	// 	this.tileIndex = data2_index;
+
+	// 	this.paletteIndex = data3_attr & 3;
+	// 	this.hideInBg = (data3_attr & 0x20) !== 0;
+	// 	this.hFlip = (data3_attr & 0x40) !== 0;
+	// 	this.vFlip = (data3_attr & 0x80) !== 0;
+	// }
 }
 
 export class Tile {

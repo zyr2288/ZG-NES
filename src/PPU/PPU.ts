@@ -1,9 +1,10 @@
 import { Bus } from "../Bus";
+import { BitValue, BitValueRev } from "../NESConst";
 import { Sprite, Tile } from "./PPUBlock";
 
 const AllSpriteCount = 64;
 /**一行最多显示精灵数，-1为无限制 */
-// const LineMaxSprite = 8;
+const LineMaxSprite = 64;
 const BaseNametableAddress = [0x2000, 0x2400, 0x2800, 0x2C00];
 
 export enum MirrorType {
@@ -17,14 +18,23 @@ export enum MirrorType {
 export class PPU {
 
 	oamAddress = 0;
-	oamMemory = new Uint8Array(256);
+	/**Object Attribute Memory */
+	oam = new Uint8Array(256);
+
+	/**secondaryOam，简化算法 */
+	secondaryOam: Sprite[] = [];
+	secondarySpriteCount = 0;
+
+	lineSpritePixels = new Int8Array(256);
 	allSprite: Sprite[] = [];
 	showSprite = new Int8Array(AllSpriteCount);
 
+	screenPixels = new Uint8Array();
 	/**扫描线 */
 	scanLine = 0;
 	/**PPU周期 */
 	cycle = 0;
+	frame = 0;
 	mirrorType = MirrorType.FourScreen;
 
 	nameTableMap = [0, 0, 0, 0];
@@ -103,7 +113,18 @@ export class PPU {
 		/**First or second write toggle (1 bit) 写入第一次或者是第二次的触发器*/
 		w: 0
 	};
-
+	private latchs = {
+		nameTable: 0,
+		attributeTable: 0, // 2bit
+		lowBackgorundTailByte: 0,
+		highBackgorundTailByte: 0
+	};
+	private shiftRegister = {
+		lowBackgorundTailBytes: 0, // Includes tow tail byte
+		highBackgorundTailBytes: 0, // Includes tow tail byte
+		lowBackgroundAttributeByes: 0,
+		highBackgroundAttributeByes: 0,
+	}
 	private nmiDelay = -1;
 
 	private readonly bus: Bus;
@@ -121,6 +142,8 @@ export class PPU {
 		this.Write_2000(0);
 		this.Write_2001(0);
 		this.showSprite.fill(-1);
+		for (let i = 0; i < AllSpriteCount; i++)
+			this.secondaryOam[i] = new Sprite();
 	}
 
 	//#region 写入
@@ -135,7 +158,7 @@ export class PPU {
 				break;
 			case 0x2003:
 				this.oamAddress = value;
-				this.oamMemory[this.oamAddress & 0xFF] = value;
+				this.oam[this.oamAddress & 0xFF] = value;
 				this.oamAddress++;
 				break;
 			case 0x2004:
@@ -164,7 +187,7 @@ export class PPU {
 				data = this.Read_2002();
 				break;
 			case 0x2004:
-				data = this.oamMemory[this.oamAddress];
+				data = this.oam[this.oamAddress];
 				break;
 			case 0x2007:
 				data = this.ppuReadBuffer;
@@ -208,9 +231,9 @@ export class PPU {
 	Clock() {
 		// For odd frames, the cycle at the end of the scanline is skipped (this is done internally by jumping directly from (339,261) to (0,0)
 		// However, this behavior can be bypassed by keeping rendering disabled until after this scanline has passed
-		// if (this.scanLine === 261 && this.cycle === 339 && this.frame & 0x01 && (this.ppuMask.showBG || this.ppuMask.showSprite)) {
-		// 	this.Cycle();
-		// }
+		if (this.scanLine === 261 && this.cycle === 339 && this.frame & 0x01 && (this.ppuMask.showBG || this.ppuMask.showSprite)) {
+			this.Cycle();
+		}
 
 		this.Cycle();
 
@@ -224,40 +247,40 @@ export class PPU {
 
 			// Cycle 1 - 64: Clear secondary OAM
 			if (1 === this.cycle) {
-				// this.clearSecondaryOam();
+				this.ClearSecondaryOam();
 			}
 
 			// Cycle 65 - 256: Sprite evaluation for next scanline
 			if (65 === this.cycle) {
-				// this.evalSprite();
+				this.evalSprite();
 			}
 
 			// Cycle 1 - 256: fetch NT, AT, tile
 			if (1 <= this.cycle && this.cycle <= 256) {
-				// this.shiftBackground();
-				// this.renderPixel();
-				// this.fetchTileRelatedData();
+				this.ShiftBackground();
+				this.RenderPixel();
+				this.FetchTileRelatedData();
 			}
 
 			// Cycle 256
 			if (this.cycle === 256) {
-				// this.incrementVerticalPosition();
+				this.IncrementVerticalPosition();
 			}
 
 			// Cycle 257
 			if (this.cycle === 257) {
-				// this.copyHorizontalBits();
+				this.CopyHorizontalBits();
 			}
 
 			// Cycle 257 - 320: Sprite fetches
 			if (this.cycle === 257) {
-				// this.fetchSprite();
+				this.FetchSprite();
 			}
 
 			// Cycle 321 - 336: fetch NT, AT, tile
 			if (321 <= this.cycle && this.cycle <= 336) {
-				// this.shiftBackground();
-				// this.fetchTileRelatedData();
+				this.shiftBackground();
+				this.fetchTileRelatedData();
 			}
 
 			// Cycle 337 - 340: unused NT fetches
@@ -271,31 +294,31 @@ export class PPU {
 
 			// Cycle 1 - 256: fetch NT, AT, tile
 			if (1 <= this.cycle && this.cycle <= 256) {
-				// this.shiftBackground();
-				// this.fetchTileRelatedData();
+				this.shiftBackground();
+				this.fetchTileRelatedData();
 			}
 
 			// Cycle 256
 			if (this.cycle === 256) {
-				// this.incrementVerticalPosition();
+				this.IncrementVerticalPosition();
 			}
 
 			// Cycle 257
 			if (this.cycle === 257) {
-				// this.copyHorizontalBits();
+				this.CopyHorizontalBits();
 			}
 
 			// Cycle 257 - 320: do nothing
 
 			// Cycle 280
 			if (this.cycle === 280) {
-				// this.copyVerticalBits();
+				this.CopyVerticalBits();
 			}
 
 			// Cycle 321 - 336: fetch NT, AT, tile
 			if (321 <= this.cycle && this.cycle <= 336) {
-				// this.shiftBackground();
-				// this.fetchTileRelatedData();
+				this.shiftBackground();
+				this.fetchTileRelatedData();
 			}
 		}
 	}
@@ -421,11 +444,11 @@ export class PPU {
 	private DMACopy() {
 		let index;
 		for (let i = 0; i < 256; i++) {
-			this.oamMemory[i] = this.bus.cpu.ram[i + this.oamAddress];
+			this.oam[i] = this.bus.cpu.ram[i + this.oamAddress];
 			if ((i & 3) === 0) {
 				index = i / 4;
 				let sprite = this.allSprite[i / 4];
-				sprite.y = this.oamMemory[i];
+				sprite.y = this.oam[i];
 			}
 		}
 	}
@@ -466,12 +489,6 @@ export class PPU {
 
 	}
 
-	private RenderPixel() {
-		const x = this.cycle - 1;
-		const y = this.scanLine;
-
-	}
-
 	//#region 读取写入
 	private ReadByte(address: number) {
 		address &= 0x3FFF;
@@ -505,9 +522,303 @@ export class PPU {
 	}
 	//#endregion 读取写入
 
+	private fetchTileRelatedData() {
+		if (!this.ppuMask.showBG) {
+			return;
+		}
+
+		switch (this.cycle & 0x07) {
+			case 1:
+				this.LoadBackground();
+				this.fetchNameTable();
+				break;
+			case 3:
+				this.fetchAttributeTable();
+				break;
+			case 5:
+				this.FetchLowBackgroundTileByte();
+				break;
+			case 7:
+				this.FetchHighBackgroundTileByte();
+				break;
+			case 0:
+				this.IncrementHorizontalPosition();
+				break;
+		}
+	}
+
 	private fetchNameTable() {
 		const address = 0x2000 | (this.register.v & 0x0FFF);
-		this.latchs.nameTable = this.ReadByte(address);
-	  }
 
+		this.latchs.nameTable = this.ReadByte(address);
+	}
+
+	private fetchAttributeTable() {
+		const address = 0x23C0 | (this.register.v & 0x0C00) | ((this.register.v >> 4) & 0x38) | ((this.register.v >> 2) & 0x07);
+
+		const isRight = !!(this.register.v & 0x02);
+		const isBottom = !!(this.register.v & 0x40);
+
+		const offset = (isBottom ? 0x02 : 0) | (isRight ? 0x01 : 0);
+
+		this.latchs.attributeTable = this.ReadByte(address) >> (offset << 1) & 0x03;
+	}
+
+	private FetchLowBackgroundTileByte() {
+		const address = this.ppuCTRL.bgPattern + (this.latchs.nameTable << 4) + (this.register.v >> 12 & 0x07);
+		this.latchs.lowBackgorundTailByte = this.ReadByte(address);
+	}
+
+	private FetchHighBackgroundTileByte() {
+		const address = this.ppuCTRL.bgPattern + (this.latchs.nameTable << 4) + (this.register.v >> 12 & 0x07) + 8;
+		this.latchs.highBackgorundTailByte = this.ReadByte(address);
+	}
+
+	private LoadBackground() {
+		this.shiftRegister.lowBackgorundTailBytes |= this.latchs.lowBackgorundTailByte;
+		this.shiftRegister.highBackgorundTailBytes |= this.latchs.highBackgorundTailByte;
+		this.shiftRegister.lowBackgroundAttributeByes |= (this.latchs.attributeTable & 0x01) ? 0xFF : 0;
+		this.shiftRegister.highBackgroundAttributeByes |= (this.latchs.attributeTable & 0x02) ? 0xFF : 0;
+	}
+
+	private ShiftBackground() {
+		if (!this.ppuMask.showBG) {
+			return;
+		}
+
+		this.shiftRegister.lowBackgorundTailBytes <<= 1;
+		this.shiftRegister.highBackgorundTailBytes <<= 1;
+		this.shiftRegister.lowBackgroundAttributeByes <<= 1;
+		this.shiftRegister.highBackgroundAttributeByes <<= 1;
+	}
+
+	// Between cycle 328 of a scanline, and 256 of the next scanline
+	private IncrementHorizontalPosition(): void {
+		if ((this.register.v & 0x1F) === 0x1F) {
+			this.register.v &= ~0x1F;
+			this.register.v ^= 0x0400;
+		} else {
+			this.register.v += 1;
+		}
+	}
+
+	// At cycle 256 of each scanline
+	private IncrementVerticalPosition(): void {
+		if ((this.register.v & 0x7000) !== 0x7000) {
+			this.register.v += 0x1000;
+		} else {
+			this.register.v &= ~0x7000;
+			let y = (this.register.v & 0x03E0) >> 5;
+			if (y === 29) {
+				y = 0;
+				this.register.v ^= 0x0800;
+			} else if (y === 31) {
+				y = 0;
+			} else {
+				y += 1;
+			}
+			this.register.v = (this.register.v & ~0x03E0) | (y << 5);
+		}
+	}
+
+	// At cycle 257 of each scanline
+	private CopyHorizontalBits(): void {
+		// v: ....F.. ...EDCBA = t: ....F.. ...EDCBA
+		this.register.v = (this.register.v & 0b1111101111100000) | (this.register.t & ~0b1111101111100000) & 0x7FFF;
+	}
+
+	// During cycles 280 to 304 of the pre-render scanline (end of vblank)
+	private copyVerticalBits(): void {
+		// v: IHGF.ED CBA..... = t: IHGF.ED CBA.....
+		this.register.v = (this.register.v & 0b1000010000011111) | (this.register.t & ~0b1000010000011111) & 0x7FFF;
+	}
+
+	//#region 渲染像素
+	private RenderPixel(): void {
+		const x = this.cycle - 1;
+		const y = this.scanLine;
+
+		const offset = 0x8000 >> this.register.x;
+		const bit0 = this.shiftRegister.lowBackgorundTailBytes & offset ? 8 : 0;
+		const bit1 = this.shiftRegister.highBackgorundTailBytes & offset ? 4 : 0;
+		const bit2 = this.shiftRegister.lowBackgroundAttributeByes & offset ? 2 : 0;
+		const bit3 = this.shiftRegister.highBackgroundAttributeByes & offset ? 1 : 0;
+
+		const paletteIndex = bit3 | bit2 | bit1 | bit0;
+		const spritePaletteIndex = this.lineSpritePixels[x] & SpritePixel.PALETTE;
+
+		const isTransparentSprite = spritePaletteIndex % 4 === 0 || !this.ppuMask.showSprite;
+		const isTransparentBackground = paletteIndex % 4 === 0 || !this.ppuMask.showBG;
+
+		let address = 0x3F00;
+		if (isTransparentBackground) {
+			if (isTransparentSprite) {
+				// Do nothing
+			} else {
+				address = 0x3F10 + spritePaletteIndex;
+			}
+		} else {
+			if (isTransparentSprite) {
+				address = 0x3F00 + paletteIndex;
+			} else {
+				// Sprite 0 hit does not happen:
+				//   - If background or sprite rendering is disabled in PPUMASK ($2001)
+				//   - At x=0 to x=7 if the left-side clipping window is enabled (if bit 2 or bit 1 of PPUMASK is 0).
+				//   - At x=255, for an obscure reason related to the pixel pipeline.
+				//   - At any pixel where the background or sprite pixel is transparent (2-bit color index from the CHR pattern is %00).
+				//   - If sprite 0 hit has already occurred this frame. Bit 6 of PPUSTATUS ($2002) is cleared to 0 at dot 1 of the pre-render line.
+				//     This means only the first sprite 0 hit in a frame can be detected.
+				if (this.spritePixels[x] & SpritePixel.ZERO) {
+					if (
+						(!this.mask.isShowBackground || !this.mask.isShowSprite) ||
+						(0 <= x && x <= 7 && (!this.mask.isShowSpriteLeft8px || !this.mask.isShowBackgroundLeft8px)) ||
+						x === 255
+						// TODO: Only the first sprite 0 hit in a frame can be detected.
+					) {
+						// Sprite 0 hit does not happen
+					} else {
+						this.ppuStatus.spriteZeroHit = true;
+					}
+				}
+				address = this.spritePixels[x] & SpritePixel.BEHIND_BG ? 0x3F00 + paletteIndex : 0x3F10 + spritePaletteIndex;
+			}
+		}
+
+		this.screenPixels[x + y * 256] = this.ReadByte(address);
+	}
+	//#endregion 渲染像素
+
+	private ClearSecondaryOam() {
+		// if (!this.ppuMask.showSprite) {
+		// 	return;
+		// }
+
+		// this.secondaryOam.forEach(oam => {
+		// 	oam.attributes = 0xFF;
+		// 	oam.tileIndex = 0xFF;
+		// 	oam.x = 0xFF;
+		// 	oam.y = 0xFF;
+		// });
+		this.secondarySpriteCount = 0;
+	}
+
+	//#region 计算精灵
+	private evalSprite() {
+		if (!this.ppuMask.showSprite) {
+			return;
+		}
+
+		// Find eligible sprites
+		for (let i = 0; i < 0x100; i += 4) {
+			const y = this.oam[i];
+			if (this.scanLine < y || (this.scanLine >= y + this.ppuCTRL.spriteSize))
+				continue;
+
+			// Overflow?
+			if (this.secondarySpriteCount === 8) {
+				this.ppuStatus.spriteOverflow = true;
+				// break;
+			}
+
+			this.secondaryOam[this.secondarySpriteCount].SetData(this.oam, i, i === 0);
+			this.secondarySpriteCount++;
+		}
+
+		if (this.secondarySpriteCount < AllSpriteCount)
+			this.secondaryOam[this.secondarySpriteCount].useble = false;
+	}
+	//#endregion 计算精灵
+
+	//#region 渲染精灵
+	/**渲染精灵 */
+	private FetchSprite() {
+		if (!this.ppuMask.showSprite) {
+			return;
+		}
+
+		this.lineSpritePixels.fill(-1);
+		for (let i = this.secondarySpriteCount - 1; i >= 0; i--) {
+			let sprite = this.secondaryOam[i];
+			if (sprite.y >= 0xEF)
+				continue;
+
+			let address: number;
+			if (this.ppuCTRL.spriteSize === 8) {
+				const baseAddress = this.ppuCTRL.spritePattern + (sprite.tileIndex << 4);
+				const offset = sprite.vFlip ? (7 - this.scanLine + sprite.y) : (this.scanLine - sprite.y);
+				address = baseAddress + offset;
+			} else {
+				const baseAddress = ((sprite.tileIndex & 0x01) ? 0x1000 : 0x0000) + ((sprite.tileIndex & 0xFE) << 4);
+				const offset = sprite.vFlip ? (15 - this.scanLine + sprite.y) : (this.scanLine - sprite.y);
+				address = baseAddress + (offset & 0x7) + (offset >> 4) << 5;
+			}
+
+			// Fetch tile data
+			const tileL = this.ReadByte(address);
+			const tileH = this.ReadByte(address + 8);
+
+			// Generate sprite pixels
+			for (let i = 0; i < LineMaxSprite; i++) {
+				const b = sprite.hFlip ? BitValue[i] : BitValueRev[i];
+
+				const bit0 = tileL & b ? 1 : 0;
+				const bit1 = tileH & b ? 2 : 0;
+				const bit2_3 = sprite.paletteIndex << 2;
+				const index = bit2_3 | bit1 | bit0;
+
+				if (index % 4 === 0 && ((this.spritePixels[sprite.x + i] & SpritePixel.PALETTE) & 3) !== 0) {
+					continue;
+				}
+
+				this.lineSpritePixels[sprite.x + i] = index | (sprite.hideInBg ? SpritePixel.BEHIND_BG : 0) | (isZero ? SpritePixel.ZERO : 0);
+			}
+		}
+		// for (const sprite of this.secondaryOam.reverse()) {
+		// 	// Hidden sprite?
+		// 	if (sprite.y >= 0xEF) {
+		// 		continue;
+		// 	}
+
+		// 	const isBehind = !!(sprite.attributes & SpriteAttribute.PRIORITY);
+		// 	const isZero = sprite.isZero;
+		// 	const isFlipH = !!(sprite.attributes & SpriteAttribute.FLIP_H);
+		// 	const isFlipV = !!(sprite.attributes & SpriteAttribute.FLIP_V);
+
+		// 	// Caculate tile address
+		// 	let address: number;
+		// 	if (this.ppuCTRL.spriteSize === 8) {
+		// 		const baseAddress = this.ppuCTRL.spritePattern + (sprite.tileIndex << 4);
+		// 		const offset = isFlipV ? (7 - this.scanLine + sprite.y) : (this.scanLine - sprite.y);
+		// 		address = baseAddress + offset;
+		// 	} else {
+		// 		const baseAddress = ((sprite.tileIndex & 0x01) ? 0x1000 : 0x0000) + ((sprite.tileIndex & 0xFE) << 4);
+		// 		const offset = isFlipV ? (15 - this.scanLine + sprite.y) : (this.scanLine - sprite.y);
+		// 		address = baseAddress + offset % 8 + Math.floor(offset / 8) * 16;
+		// 	}
+
+		// 	// Fetch tile data
+		// 	const tileL = this.ReadByte(address);
+		// 	const tileH = this.ReadByte(address + 8);
+
+		// 	// Generate sprite pixels
+		// 	for (let i = 0; i < 8; i++) {
+		// 		const b = isFlipH ? 0x01 << i : 0x80 >> i;
+
+		// 		const bit0 = tileL & b ? 1 : 0;
+		// 		const bit1 = tileH & b ? 1 : 0;
+		// 		const bit2 = sprite.attributes & SpriteAttribute.PALETTE_L ? 1 : 0;
+		// 		const bit3 = sprite.attributes & SpriteAttribute.PALETTE_H ? 1 : 0;
+		// 		const index = bit3 << 3 | bit2 << 2 | bit1 << 1 | bit0;
+
+		// 		if (index % 4 === 0 && (this.spritePixels[sprite.x + i] & SpritePixel.PALETTE) % 4 !== 0) {
+		// 			continue;
+		// 		}
+
+		// 		this.spritePixels[sprite.x + i] = index |
+		// 			(isBehind ? SpritePixel.BEHIND_BG : 0) |
+		// 			(isZero ? SpritePixel.ZERO : 0);
+		// 	}
+		// }
+	}
+	//#endregion 渲染精灵
 }
