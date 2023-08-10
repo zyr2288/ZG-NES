@@ -56,3 +56,18 @@ export const enum ChipType {
 	Namco163 = 0x10,
 	Sunsoft5B = 0x20
 }
+
+/**
+ * https://www.nesdev.org/wiki/Cycle_reference_chart
+ */
+export enum ClockRate {
+	NTSC = 3, PAL = 3.2, Dendy = 3
+}
+
+export enum CPUFrameClock {
+	NTSC = 29780.5, PAL = 33247.5, Dendy = 35464
+}
+
+export enum MachineType {
+	NSTC, PAL, Dendy
+}

@@ -54,14 +54,14 @@ export class Cartridge {
 		this.mapper = new mapper(this.bus);
 
 		//拷贝PRG-ROM次数
-		tempNum = data[4] * 0x4000 / this.bus.mapper.prgSize;
+		tempNum = data[4] * 0x4000 / this.mapper.prgSize;
 
 		//拷贝分割好的PRG-ROM
 		this.prgBanks = new Array<Uint8Array>(tempNum);
 		let tempArray!: Uint8Array;
 		for (let i = 0; i < tempNum; i++) {
-			tempArray = new Uint8Array(this.bus.mapper.prgSize);
-			Utils.CopyArray(data, i * this.bus.mapper.prgSize + 0x10, tempArray, 0);
+			tempArray = new Uint8Array(this.mapper.prgSize);
+			Utils.CopyArray(data, i * this.mapper.prgSize + 0x10, tempArray, 0);
 			this.prgBanks[i] = tempArray;
 		}
 
@@ -69,27 +69,27 @@ export class Cartridge {
 		if (data[4] == 1)
 			this.prgBanks[1] = tempArray;
 
-		this.bus.mapper.Initialization({ maxPrg: tempNum - 1 });
+		this.mapper.Initialization({ maxPrg: tempNum - 1 });
 
 		//如果无CHR-ROM，则返回
 		if (data[5] == 0)
 			return true;
 
 		//拷贝CHR-ROM次数
-		tempNum = data[5] * 0x2000 / this.bus.mapper.chrSize;
+		tempNum = data[5] * 0x2000 / this.mapper.chrSize;
 
 		//拷贝分割好的CHR-ROM
 		this.chrBanks = new Array<Tile[]>(tempNum);
 
 		//一个Bank多少个tile
-		let tempNum2 = this.bus.mapper.chrSize / 0x10;
+		let tempNum2 = this.mapper.chrSize / 0x10;
 
 		for (let i = 0; i < tempNum; i++) {
 			let tiles: Tile[] = new Array(tempNum2);
 			for (let j = 0; j < tempNum2; j++) {
 				let temp3: Uint8Array = new Uint8Array(0x10);
 				Utils.CopyArray(data,
-					0x10 + data[4] * 0x4000 + i * this.bus.mapper.chrSize + j * 0x10,
+					0x10 + data[4] * 0x4000 + i * this.mapper.chrSize + j * 0x10,
 					temp3,
 					0);
 				tiles[j] = new Tile(temp3);

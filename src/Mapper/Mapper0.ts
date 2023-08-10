@@ -13,7 +13,7 @@ export class Mapper0 implements IMapper {
 
 	constructor(bus: Bus) {
 		this.bus = bus;
-		this.bus.mapper = this;
+		this.bus.cartridge.mapper = this;
 	}
 
 	/**

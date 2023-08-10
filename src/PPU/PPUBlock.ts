@@ -12,6 +12,7 @@ export class Sprite {
 
 	isZero = false;
 	useble = false;
+	rendered = false;
 
 	SetData(data: Uint8Array, index: number, isZero: boolean) {
 		this.y = data[index++];
@@ -38,6 +39,13 @@ export class Sprite {
 	// 	this.hFlip = (data3_attr & 0x40) !== 0;
 	// 	this.vFlip = (data3_attr & 0x80) !== 0;
 	// }
+}
+
+export class RenderSprite {
+	paletteIndex = 0;
+	used = false;
+	isZero = false;
+	hideInBG = false;
 }
 
 export class Tile {

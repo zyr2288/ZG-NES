@@ -1,7 +1,7 @@
 import { CPU } from "./CPU/CPU";
 import { Cartridge } from "./CPU/Cartridge";
 import { DebugUtils } from "./Debug/DebugUtils";
-import { IMapper } from "./Mapper/IMapper";
+import { CPUFrameClock, ClockRate, MachineType } from "./NESConst";
 import { PPU } from "./PPU/PPU";
 
 export class Bus {
@@ -9,9 +9,11 @@ export class Bus {
 	cpu!: CPU;
 	cartridge!: Cartridge;
 	ppu!: PPU;
-	mapper!: IMapper;
-
 	debug!: DebugUtils;
+
+	frameCpuClock: number = CPUFrameClock.NTSC;
+	private cpuClockRate: number = ClockRate.NTSC;
+	private machineType: MachineType = MachineType.NSTC;
 
 	private systemClockCount = 0;
 
@@ -23,11 +25,11 @@ export class Bus {
 	Clock() {
 		while (true) {
 			this.ppu.Clock();
-			if (this.systemClockCount % 3 === 0) {
+			if (this.systemClockCount >= this.cpuClockRate) {
+				this.systemClockCount -= this.cpuClockRate;
 				if (this.cpu.Clock())
 					break;
 			}
-
 			this.systemClockCount++;
 		}
 	}
@@ -35,6 +37,9 @@ export class Bus {
 	ReadByte(address: number) {
 		if (address < 0x2000)
 			return this.cpu.ram[address & 0x7FF];
+
+		if (address >= 0x2000 && address <= 0x2007)
+			return this.ppu.Read(address);
 
 		if (address < 0x8000)
 			return this.cartridge.useSRAM ? 0 : this.cpu.sram[address & 0x1FFF];
@@ -59,6 +64,6 @@ export class Bus {
 			return;
 		}
 
-		this.mapper.WritePRG(address, value);
+		this.cartridge.mapper.WritePRG(address, value);
 	}
 }

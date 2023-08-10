@@ -4,6 +4,8 @@ export class Screen {
 	imageData: ImageData;
 
 	constructor(canvas: HTMLCanvasElement) {
+		canvas.width = 256;
+		canvas.height = 240;
 		this.content = canvas.getContext("2d")!;
 		this.imageData = new ImageData(256, 240);
 	}

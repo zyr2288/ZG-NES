@@ -42,3 +42,9 @@ function Step() {
 	nes.bus.debug.patternTable?.Update();
 	nes.bus.Clock();
 }
+
+function OneFrame() {
+	nes.bus.debug.diassembler?.Update();
+	nes.bus.debug.patternTable?.Update();
+	nes.OneFrame();
+}

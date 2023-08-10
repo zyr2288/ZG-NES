@@ -8,11 +8,6 @@ export class NES {
 
 	bus: Bus;
 
-	// private cpu: CPU;
-	// private rom: Rom;
-	// private ppu: PPU;
-	// private debug: DebugUtils;
-
 	constructor() {
 		this.bus = new Bus();
 		new CPU(this.bus);
@@ -27,7 +22,13 @@ export class NES {
 
 	/**执行一帧 */
 	OneFrame() {
-
+		while (true) {
+			this.bus.Clock();
+			if (this.bus.cpu.clock >= this.bus.frameCpuClock) {
+				this.bus.cpu.clock -= this.bus.frameCpuClock;
+				break;
+			}
+		}
 	}
 
 	LoadFile(data: ArrayBuffer) {

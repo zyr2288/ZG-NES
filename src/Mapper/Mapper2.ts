@@ -11,7 +11,11 @@ export class Mapper2 implements IMapper {
 	prgSize: number = PrgSizeAND + 1;
 	chrSize: number = 0;
 	chrRamTiles: Tile[] = [];
-	private prgSizeAND = this.prgSize - 1;
+
+	constructor(bus: Bus) {
+		this.bus = bus;
+		this.bus.cartridge.mapper = this;
+	}
 
 	Initialization(option: { maxPrg: number }): void {
 		this.bus.cartridge.prgIndex = [0, option.maxPrg];
