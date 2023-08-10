@@ -32,6 +32,16 @@ export const NesColorsStr: string[] = NesColors.map(value => {
 	return "#" + value.toString(16).padStart(6, "0");
 });
 
+export const NesColorRGB: Uint8Array[] = NesColors.map(value => {
+	let result = new Uint8Array(3);
+	result[2] = value & 0xFF;
+	value >>= 8;
+	result[1] = value & 0xFF;
+	value >>= 8;
+	result[0] = value;
+	return result;
+});
+
 /**1P按键控制 */
 export const enum Keys {
 	//1P 按键

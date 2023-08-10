@@ -1,4 +1,5 @@
 import { Bus } from "../Bus";
+import { NESOption } from "../NESOption";
 import { Disassembler } from "./Disassembler";
 import { PatternTable } from "./PatternTable";
 
@@ -15,14 +16,11 @@ export class DebugUtils {
 	}
 
 	/**设定贴图表的Canvas */
-	SetPatternCanvas(canvas: HTMLCanvasElement) {
-		this.patternTable = new PatternTable({ canvas, bus: this.bus });
+	SetPatternCanvas(option: NESOption) {
+		this.patternTable = new PatternTable(this.bus, option);
 	}
 
-	SetDisassemblerDiv(option: { disasm: HTMLDivElement, register: HTMLDivElement, flagDiv: HTMLDivElement }) {
-		// @ts-ignore
-		let temp: typeof option & { bus: Bus } = option;
-		temp.bus = this.bus;
-		this.diassembler = new Disassembler(temp);
+	SetDisassemblerDiv(option: NESOption) {
+		this.diassembler = new Disassembler(this.bus, option);
 	}
 }

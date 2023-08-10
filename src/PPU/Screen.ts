@@ -1,3 +1,6 @@
+import { Bus } from "../Bus";
+import { NesColorRGB } from "../NESConst";
+
 export class Screen {
 
 	content: CanvasRenderingContext2D;
@@ -11,8 +14,15 @@ export class Screen {
 	}
 
 	SetPixels(data: Uint8Array) {
-		for (let i = 0; i < data.length; i++)
-			this.imageData.data[i] = data[i];
+		let index = 0, imageDataIndex = 0, length = data.length, colorIndex;
+		while (index < length) {
+			colorIndex = data[index];
+			this.imageData.data[imageDataIndex++] = NesColorRGB[colorIndex][0];
+			this.imageData.data[imageDataIndex++] = NesColorRGB[colorIndex][1];
+			this.imageData.data[imageDataIndex++] = NesColorRGB[colorIndex][2];
+			this.imageData.data[imageDataIndex++] = 0xFF;
+			index++;
+		}
 
 		this.content.putImageData(this.imageData, 0, 0);
 	}

@@ -1,5 +1,6 @@
 import { Bus } from "../Bus";
 import { NesColorsStr } from "../NESConst";
+import { NESOption } from "../NESOption";
 import { Tile } from "../PPU/PPUBlock";
 
 const PixWidth = 2;
@@ -7,16 +8,19 @@ const ColorTableWidth = 32;
 
 export class PatternTable {
 
-	private context: CanvasRenderingContext2D;
+	private context: CanvasRenderingContext2D | null = null;
 	private readonly bus: Bus;
 
-	constructor(option: { canvas: HTMLCanvasElement, bus: Bus }) {
-		this.context = option.canvas.getContext("2d")!;
+	constructor(bus: Bus, option: NESOption) {
+		this.bus = bus;
+		if (!option.pattern)
+			return;
 
-		option.canvas.width = PixWidth * 8 * 16 * PixWidth;
-		option.canvas.height = PixWidth * 8 * 16 + ColorTableWidth * 2;
+		this.context = option.pattern.getContext("2d");
 
-		this.bus = option.bus;
+		option.pattern.width = PixWidth * 8 * 16 * PixWidth;
+		option.pattern.height = PixWidth * 8 * 16 + ColorTableWidth * 2;
+
 	}
 
 	Update() {
@@ -66,6 +70,9 @@ export class PatternTable {
 	}
 
 	private DrawTiles(x: number, y: number, width: number, tile: Tile, colors: string[]) {
+		if (!this.context)
+			return;
+
 		if (!tile)
 			throw "Tile 不存在";
 
@@ -79,6 +86,9 @@ export class PatternTable {
 	}
 
 	private DrawColor(x: number, y: number, width: number, color: string) {
+		if (!this.context)
+			return;
+
 		this.context.fillStyle = color;
 		this.context.fillRect(x, y, width, width);
 	}

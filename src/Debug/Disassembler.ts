@@ -1,6 +1,7 @@
 import { Bus } from "../Bus";
 import { Flags } from "../CPU/CPU";
 import { AddressingMode, Instruction, OperationTable } from "../CPU/OperationTable";
+import { NESOption } from "../NESOption";
 
 const LeftLength = 20;
 const DebugLines = 20;
@@ -8,37 +9,44 @@ const DebugLines = 20;
 export class Disassembler {
 
 	private readonly bus: Bus;
-	private readonly disasmDiv: HTMLDivElement;
-	private readonly registersDiv: HTMLDivElement;
-	private readonly checkBox: HTMLInputElement[];
+	private readonly disasmDiv?: HTMLDivElement;
+	private readonly registersDiv?: HTMLDivElement;
+	private readonly checkBox?: HTMLInputElement[];
 
 	private preAddress = -1;
 	private disAddStart = 0;
 
 	private disResult = { line: "", address: 0 };
 
-	constructor(option: { disasm: HTMLDivElement, register: HTMLDivElement, flagDiv: HTMLDivElement, bus: Bus }) {
-		this.bus = option.bus;
-		this.disasmDiv = option.disasm;
-		this.registersDiv = option.register;
-		this.checkBox = [];
-		for (let i = 0; i < 8; i++) {
-			this.checkBox[i] = document.createElement("input");
-			let check = this.checkBox[i];
-			check.type = "checkbox";
-			option.flagDiv.appendChild(check);
-			
-			let span = document.createElement("span");
-			span.innerText = Flags[i].substring(4);
-			option.flagDiv.appendChild(span);
+	constructor(bus: Bus, option: NESOption) {
+		this.bus = bus;
+		if (option.disasm)
+			this.disasmDiv = option.disasm;
 
-			let br = document.createElement("br");
-			option.flagDiv.appendChild(br);
+		if (option.register && option.flagDiv) {
+			this.registersDiv = option.register;
+			this.checkBox = [];
+			for (let i = 0; i < 8; i++) {
+				this.checkBox[i] = document.createElement("input");
+				let check = this.checkBox[i];
+				check.type = "checkbox";
+				option.flagDiv.appendChild(check);
+
+				let span = document.createElement("span");
+				span.innerText = Flags[i].substring(4);
+				option.flagDiv.appendChild(span);
+
+				let br = document.createElement("br");
+				option.flagDiv.appendChild(br);
+			}
 		}
 	}
 
 	//#region 更新
 	Update() {
+		if (!this.disasmDiv)
+			return;
+
 		let index = DebugLines;
 		this.disResult.address = this.bus.cpu.registers.pc;
 		let first = true;
@@ -165,6 +173,9 @@ export class Disassembler {
 
 	//#region 更新寄存器
 	private UpdateRegisters() {
+		if (!this.registersDiv)
+			return;
+
 		let result = "A: " + this.GetByteHex(this.bus.cpu.registers.a) + "\n";
 		result += "X: " + this.GetByteHex(this.bus.cpu.registers.x) + "\n";
 		result += "Y: " + this.GetByteHex(this.bus.cpu.registers.y) + "\n";
@@ -176,6 +187,9 @@ export class Disassembler {
 
 	//#region 更新标识位
 	private UpdateFlags() {
+		if (!this.checkBox)
+			return;
+
 		for (let i = 0; i < 8; i++) {
 			this.checkBox[i].checked = this.bus.cpu.flags[i];
 		}

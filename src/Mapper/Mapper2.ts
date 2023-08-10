@@ -22,7 +22,7 @@ export class Mapper2 implements IMapper {
 		this.bus.cartridge.chrIndex = [-1];
 		this.bus.cartridge.chrRam = true;
 
-		for (let i = 0; i < 256; i++)
+		for (let i = 0; i < 512; i++)
 			this.chrRamTiles[i] = new Tile(new Uint8Array(16));
 	}
 
@@ -46,7 +46,6 @@ export class Mapper2 implements IMapper {
 	}
 
 	GetCHRTile(address: number) {
-		address >>= 4;
 		return this.chrRamTiles[address];
 	}
 

@@ -1,9 +1,13 @@
-var nes = new NES();
+let screen = document.getElementById("screen");
+let pattern = document.getElementById("pattern");
+
+var nes = new NES({ screen, pattern });
 
 async function OpenFile() {
 	// @ts-ignore
 	let file = await OpenFileDialog(".nes");
 	nes.LoadFile(file);
+	nes.Reset();
 }
 
 function OpenFileDialog(accept) {

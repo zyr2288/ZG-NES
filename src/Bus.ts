@@ -59,6 +59,11 @@ export class Bus {
 			return;
 		}
 
+		if (address >= 0x2000 && address <= 0x2007) {
+			this.ppu.Write(address, value);
+			return;
+		}
+
 		if (address < 0x8000 && this.cartridge.useSRAM) {
 			this.cpu.sram[address & 0x1FFF] = value;
 			return;

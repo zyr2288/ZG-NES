@@ -29,7 +29,7 @@ export class PPU {
 	allSprite: Sprite[] = [];
 	showSprite = new Int8Array(AllSpriteCount);
 
-	screenPixels = new Uint8Array();
+	screenPixels = new Uint8Array(256 * 240);
 	/**扫描线 */
 	scanLine = 0;
 	/**PPU周期 */
@@ -133,9 +133,17 @@ export class PPU {
 		this.bus = bus;
 		this.bus.ppu = this;
 
-		for (let i = 0; i < this.nameTableData.length; i++) {
+		for (let i = 0; i < 4; i++)
 			this.nameTableData[i] = new Uint8Array(0x400);
-		}
+
+		for (let i = 0; i < AllSpriteCount; i++)
+			this.allSprite[i] = new Sprite();
+
+		for (let i = 0; i < AllSpriteCount; i++)
+			this.secondaryOam[i] = new Sprite();
+
+		for (let i = 0; i < 256; i++)
+			this.lineSpritePixels[i] = new RenderSprite();
 	}
 
 	Reset() {
@@ -176,6 +184,7 @@ export class PPU {
 				this.Write_2007(value);
 				break;
 			case 0x4014:
+				this.DMACopy(value);
 				break;
 		}
 	}
@@ -193,8 +202,7 @@ export class PPU {
 				data = this.oam[this.oamAddress];
 				break;
 			case 0x2007:
-				data = this.ppuReadBuffer;
-				this.ppuReadBuffer = 0;
+				data = this.Read_2007();
 				break;
 		}
 		return data;
@@ -445,16 +453,17 @@ export class PPU {
 	//#endregion 执行一个Cycle
 
 	//#region DMA复制
-	private DMACopy() {
+	private DMACopy(value: number) {
 		let index;
 		for (let i = 0; i < 256; i++) {
 			this.oam[i] = this.bus.cpu.ram[i + this.oamAddress];
 			if ((i & 3) === 0) {
-				index = i / 4;
-				let sprite = this.allSprite[i / 4];
+				index = i >> 2;
+				let sprite = this.allSprite[index];
 				sprite.y = this.oam[i];
 			}
 		}
+		this.bus.cpu.cycle += 512;
 	}
 	//#endregion DMA复制
 

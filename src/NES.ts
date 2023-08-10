@@ -2,22 +2,29 @@ import { Bus } from "./Bus";
 import { CPU } from "./CPU/CPU";
 import { Cartridge } from "./CPU/Cartridge";
 import { DebugUtils } from "./Debug/DebugUtils";
+import { NESOption } from "./NESOption";
 import { PPU } from "./PPU/PPU";
+import { Screen } from "./PPU/Screen";
 
 export class NES {
 
 	bus: Bus;
+	screen?: Screen;
 
-	constructor() {
+	constructor(option: NESOption) {
 		this.bus = new Bus();
 		new CPU(this.bus);
 		new Cartridge(this.bus);
 		new PPU(this.bus);
 		new DebugUtils(this.bus);
+
+		this.screen = new Screen(option.screen);
+		this.SetDebug(option);
 	}
 
 	Reset() {
 		this.bus.cpu.Reset();
+		this.bus.ppu.Reset();
 	}
 
 	/**执行一帧 */
@@ -29,6 +36,7 @@ export class NES {
 				break;
 			}
 		}
+		this.screen?.SetPixels(this.bus.ppu.screenPixels);
 	}
 
 	LoadFile(data: ArrayBuffer) {
@@ -38,8 +46,8 @@ export class NES {
 	}
 
 	/**更新调色板信息 */
-	SetDebug(option: { canvas: HTMLCanvasElement, disasm: HTMLDivElement, register: HTMLDivElement, flagDiv: HTMLDivElement }) {
-		this.bus.debug.SetPatternCanvas(option.canvas);
+	SetDebug(option: NESOption) {
+		this.bus.debug.SetPatternCanvas(option);
 		this.bus.debug.SetDisassemblerDiv(option);
 	}
 
