@@ -185,8 +185,7 @@ export class PPU {
 				this.oamAddress = value;
 				break;
 			case 0x2004:
-				this.oam[this.oamAddress & 0xFF] = value;
-				this.oamAddress++;
+				this.Write_2004(value);
 				break;
 			case 0x2005:
 				this.Write_2005(value);
@@ -377,7 +376,10 @@ export class PPU {
 	}
 
 	private Write_2004(value: number) {
-
+		const index = this.oamAddress & 0xFF;
+		this.oam[index] = value;
+		this.oamAddress++;
+		this.SetSprite(index);
 	}
 
 	private Write_2005(value: number) {
@@ -409,28 +411,32 @@ export class PPU {
 	/**DMA Copy */
 	private Write_4014(value: number) {
 		this.oamAddress = value << 8;
-		let i: number, sprite: Sprite;
+		let i: number;
 		for (i = 0; i < 256; i++) {
 			this.oam[i] = this.bus.ReadByte(i + this.oamAddress);
-			sprite = this.allSprite[i >> 2];
-			switch (i & 3) {
-				case 0:
-					sprite.y = this.oam[i];
-					sprite.isZero = i === 0;
-					break;
-				case 1:
-					sprite.tileIndex = this.oam[i];
-					break;
-				case 2:
-					sprite.tileIndex = this.oam[i];
-					break;
-				case 3:
-					sprite.x = this.oam[i];
-					break;
-			}
+			this.SetSprite(i);
 		}
 
 		this.bus.cpu.cycle += this.bus.cpu.cycle & 0x1 ? 513 : 514;
+	}
+
+	private SetSprite(oamIndex: number) {
+		const sprite = this.allSprite[oamIndex >> 2];
+		switch (oamIndex & 3) {
+			case 0:
+				sprite.y = this.oam[oamIndex];
+				sprite.isZero = oamIndex === 0;
+				break;
+			case 1:
+				sprite.tileIndex = this.oam[oamIndex];
+				break;
+			case 2:
+				sprite.SetAttribute(this.oam[oamIndex]);
+				break;
+			case 3:
+				sprite.x = this.oam[oamIndex];
+				break;
+		}
 	}
 	//#endregion 写入各个接口
 
