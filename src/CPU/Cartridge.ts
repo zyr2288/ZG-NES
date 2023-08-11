@@ -1,5 +1,6 @@
 import { Bus } from "../Bus";
 import { IMapper, MapperLoader } from "../Mapper/IMapper";
+import { MirrorType } from "../PPU/PPU";
 import { Tile } from "../PPU/PPUBlock";
 import { Utils } from "../Utils";
 
@@ -70,6 +71,11 @@ export class Cartridge {
 			this.prgBanks[1] = tempArray;
 
 		this.mapper.Initialization({ maxPrg: tempNum - 1 });
+
+		const screen = data[6] & 0x01;
+
+		this.bus.ppu.SetMirrorType(screen);
+
 
 		//如果无CHR-ROM，则返回
 		if (data[5] == 0)

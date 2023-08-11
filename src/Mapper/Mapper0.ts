@@ -20,7 +20,6 @@ export class Mapper0 implements IMapper {
 	 * Mapper0 直接使用一个PRG-ROM进行管理
 	 */
 	Initialization(option: { maxPrg: number }): void {
-		debugger;
 		let tempBank = new Uint8Array(0x8000);
 		Utils.CopyArray(this.bus.cartridge.prgBanks[0], 0, tempBank, 0);
 		if (option.maxPrg === 0) {
@@ -35,18 +34,13 @@ export class Mapper0 implements IMapper {
 	}
 
 	ReadCHR(address: number) {
-		let tile = this.GetCHRTile(address);
+		const tile = this.bus.cartridge.chrBanks[0][address >> 4];
 		return tile.data[address & 0xF];
 	}
 	GetCHRTile(address: number): Tile {
-		address >>= 4;
-		if (address < 0x100)
-			return this.bus.cartridge.chrBanks[0][address];
-		else
-			return this.bus.cartridge.chrBanks[1][address];
+		return this.bus.cartridge.chrBanks[0][address];
 	}
 	WriteCHR(address: number, value: number): void { }
-
 
 	WritePRG(address: number, value: number) { }
 	ReadPRG(address: number) {

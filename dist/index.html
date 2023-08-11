@@ -9,16 +9,20 @@
 	<style>
 		canvas {
 			border: 1px solid #000;
+			display: block;
 		}
 
-		#disasm, #register, #flagDiv {
+		#disasm,
+		#register,
+		#flagDiv {
 			white-space: pre;
 			font-family: "consolas";
 			display: block;
 		}
 
-		.debug {
+		.main, .debug {
 			display: flex;
+			align-items: center;
 			gap: 10px;
 		}
 	</style>
@@ -29,16 +33,16 @@
 	<button onclick="Test()">测试</button>
 	<button onclick="Step()">单步</button>
 	<button onclick="OneFrame()">一帧</button>
-	<hr>
-	<canvas id="screen"></canvas>
-	<hr>
-	<div class="debug">
-		<canvas id="pattern"></canvas>
-		<div id="disasm"></div>
-		<div id="register"></div>
-		<div id="flagDiv"></div>
+	<button onclick="Run()">运行</button>
+	<div class="main">
+		<canvas id="screen"></canvas>
+		<div class="debug">
+			<canvas id="pattern"></canvas>
+			<div id="disasm"></div>
+			<div id="register"></div>
+			<div id="flagDiv"></div>
+		</div>
 	</div>
-
 	<script src="test.js"></script>
 </body>
 

@@ -7,8 +7,22 @@ const AllSpriteCount = 64;
 const LineMaxSprite = 64;
 const BaseNametableAddress = [0x2000, 0x2400, 0x2800, 0x2C00];
 
+/**镜像类型 */
 export enum MirrorType {
-	Horizontal, Vertical, NT0, NT1, NT2, NT3, FourScreen
+	/**横向 */
+	Horizontal,
+	/**纵向 */
+	Vertical,
+	/**单屏0 */
+	NT0,
+	/**单屏1 */
+	NT1,
+	/**单屏2 */
+	NT2,
+	/**单屏3 */
+	NT3,
+	/**四分屏 */
+	FourScreen
 }
 
 /**
@@ -22,7 +36,7 @@ export class PPU {
 	oam = new Uint8Array(256);
 
 	/**secondaryOam，简化算法 */
-	secondaryOam: Sprite[] = [];
+	// secondaryOam: Sprite[] = [];
 	secondarySpriteCount = 0;
 
 	lineSpritePixels: RenderSprite[] = [];
@@ -139,8 +153,8 @@ export class PPU {
 		for (let i = 0; i < AllSpriteCount; i++)
 			this.allSprite[i] = new Sprite();
 
-		for (let i = 0; i < AllSpriteCount; i++)
-			this.secondaryOam[i] = new Sprite();
+		// for (let i = 0; i < AllSpriteCount; i++)
+		// 	this.secondaryOam[i] = new Sprite();
 
 		for (let i = 0; i < 256; i++)
 			this.lineSpritePixels[i] = new RenderSprite();
@@ -150,8 +164,8 @@ export class PPU {
 		this.Write_2000(0);
 		this.Write_2001(0);
 		this.showSprite.fill(-1);
-		for (let i = 0; i < AllSpriteCount; i++)
-			this.secondaryOam[i] = new Sprite();
+		// for (let i = 0; i < AllSpriteCount; i++)
+		// 	this.secondaryOam[i] = new Sprite();
 
 		for (let i = 0; i < 256; i++)
 			this.lineSpritePixels[i] = new RenderSprite();
@@ -169,10 +183,10 @@ export class PPU {
 				break;
 			case 0x2003:
 				this.oamAddress = value;
-				this.oam[this.oamAddress & 0xFF] = value;
-				this.oamAddress++;
 				break;
 			case 0x2004:
+				this.oam[this.oamAddress & 0xFF] = value;
+				this.oamAddress++;
 				break;
 			case 0x2005:
 				this.Write_2005(value);
@@ -184,7 +198,7 @@ export class PPU {
 				this.Write_2007(value);
 				break;
 			case 0x4014:
-				this.DMACopy(value);
+				this.Write_4014(value);
 				break;
 		}
 	}
@@ -362,8 +376,12 @@ export class PPU {
 		this.ppuMask.emphasizeBlue = (value & 0x80) !== 0;
 	}
 
+	private Write_2004(value: number) {
+
+	}
+
 	private Write_2005(value: number) {
-		if (this.register.w) {
+		if (this.register.w === 0) {
 			this.register.t = (this.register.t & 0xFFE0) | (value >> 3);
 			this.register.x = value & 0x07;
 		} else {
@@ -388,8 +406,31 @@ export class PPU {
 		this.register.v += this.ppuCTRL.vramAddIncrement;
 	}
 
+	/**DMA Copy */
 	private Write_4014(value: number) {
+		this.oamAddress = value << 8;
+		let i: number, sprite: Sprite;
+		for (i = 0; i < 256; i++) {
+			this.oam[i] = this.bus.ReadByte(i + this.oamAddress);
+			sprite = this.allSprite[i >> 2];
+			switch (i & 3) {
+				case 0:
+					sprite.y = this.oam[i];
+					sprite.isZero = i === 0;
+					break;
+				case 1:
+					sprite.tileIndex = this.oam[i];
+					break;
+				case 2:
+					sprite.tileIndex = this.oam[i];
+					break;
+				case 3:
+					sprite.x = this.oam[i];
+					break;
+			}
+		}
 
+		this.bus.cpu.cycle += this.bus.cpu.cycle & 0x1 ? 513 : 514;
 	}
 	//#endregion 写入各个接口
 
@@ -429,6 +470,8 @@ export class PPU {
 			this.scanLine++;
 			if (this.scanLine > 261) {
 				this.scanLine = 0;
+				this.frame++;
+				this.bus.EndFrame();
 			}
 		}
 
@@ -452,44 +495,28 @@ export class PPU {
 	}
 	//#endregion 执行一个Cycle
 
-	//#region DMA复制
-	private DMACopy(value: number) {
-		let index;
-		for (let i = 0; i < 256; i++) {
-			this.oam[i] = this.bus.cpu.ram[i + this.oamAddress];
-			if ((i & 3) === 0) {
-				index = i >> 2;
-				let sprite = this.allSprite[index];
-				sprite.y = this.oam[i];
-			}
-		}
-		this.bus.cpu.cycle += 512;
-	}
-	//#endregion DMA复制
-
 	//#region 获取精灵
 	private GetSprites() {
 		if (!this.ppuMask.showSprite)
 			return;
 
-		let spriteCount = 0;
+		this.secondarySpriteCount = 0;
 		for (let i = 0; i < AllSpriteCount; i++) {
 			let sprite = this.allSprite[i];
 			let yOffset = sprite.y + this.ppuCTRL.spriteSize;
 			if (sprite.rendered || sprite.y > this.scanLine || yOffset <= this.scanLine)
 				continue;
 
-			if (spriteCount === 8) {
+			if (this.secondarySpriteCount === 8) {
 				this.ppuStatus.spriteOverflow = true;
 				// break;
 			}
 
-			this.showSprite[spriteCount++] = i;
+			this.showSprite[this.secondarySpriteCount++] = i;
 			if (yOffset === this.scanLine - 1)
 				sprite.rendered = true;
 		}
-		if (spriteCount !== AllSpriteCount + 1)
-			this.showSprite[spriteCount] = -1;
+		this.secondarySpriteCount--;
 	}
 	//#endregion 获取精灵
 
@@ -499,8 +526,8 @@ export class PPU {
 		if (address < 0x2000) {
 			return this.bus.cartridge.mapper.ReadCHR(address);
 		} else if (address < 0x3F00) {
-			address &= 0x2FFF
 			const index = this.nameTableMap[(address >> 10) & 3];
+			address &= 0x3FF;
 			return this.nameTableData[index][address];
 		} else {
 			address &= 0x1F
@@ -512,10 +539,10 @@ export class PPU {
 		address &= 0x3FFF;
 		if (address < 0x2000) {
 			this.bus.cartridge.mapper.WriteCHR(address, value);
-		} else if (address < 0x3000) {
-
 		} else if (address < 0x3F00) {
-
+			const index = this.nameTableMap[(address >> 10) & 3];
+			address &= 0x3FF;
+			this.nameTableData[index][address] = value;
 		} else {
 			address &= 0x1F;
 			if ((address & 3) === 0)
@@ -526,6 +553,7 @@ export class PPU {
 	}
 	//#endregion 读取写入
 
+	//#region 获取背景位置
 	private FetchTileRelatedData() {
 		if (!this.ppuMask.showBG) {
 			return;
@@ -639,6 +667,7 @@ export class PPU {
 		// v: IHGF.ED CBA..... = t: IHGF.ED CBA.....
 		this.register.v = (this.register.v & 0b1000010000011111) | (this.register.t & ~0b1000010000011111) & 0x7FFF;
 	}
+	//#endregion 获取背景位置
 
 	//#region 渲染像素
 	private RenderPixel(): void {
@@ -657,16 +686,16 @@ export class PPU {
 		const isTransparentSprite = spritePaletteIndex % 4 === 0 || !this.ppuMask.showSprite;
 		const isTransparentBackground = paletteIndex % 4 === 0 || !this.ppuMask.showBG;
 
-		let address = 0x3F00;
+		let patternIndex = 0;
 		if (isTransparentBackground) {
 			if (isTransparentSprite) {
 				// Do nothing
 			} else {
-				address = 0x3F10 + spritePaletteIndex;
+				patternIndex = 0x10 + spritePaletteIndex;
 			}
 		} else {
 			if (isTransparentSprite) {
-				address = 0x3F00 + paletteIndex;
+				patternIndex = paletteIndex;
 			} else {
 				// Sprite 0 hit does not happen:
 				//   - If background or sprite rendering is disabled in PPUMASK ($2001)
@@ -687,11 +716,11 @@ export class PPU {
 						this.ppuStatus.spriteZeroHit = true;
 					}
 				}
-				address = this.lineSpritePixels[x].hideInBG ? 0x3F00 + paletteIndex : 0x3F10 + spritePaletteIndex;
+				patternIndex = this.lineSpritePixels[x].hideInBG ? paletteIndex : spritePaletteIndex + 0x10;
 			}
 		}
 
-		this.screenPixels[x + y * 256] = this.ReadByte(address);
+		this.screenPixels[x + y * 256] = this.paletteTable[patternIndex];
 	}
 	//#endregion 渲染像素
 
@@ -712,7 +741,7 @@ export class PPU {
 		}
 
 		for (let i = this.secondarySpriteCount - 1; i >= 0; i--) {
-			let sprite = this.secondaryOam[i];
+			let sprite = this.allSprite[this.showSprite[i]];
 			if (sprite.y >= 0xEF)
 				continue;
 
@@ -721,7 +750,7 @@ export class PPU {
 				tileIndex = (this.ppuCTRL.spritePattern >> 4) + sprite.tileIndex;
 				tileY = sprite.vFlip ? (7 - this.scanLine + sprite.y) : (this.scanLine - sprite.y);
 			} else {
-				tileIndex = ((sprite.tileIndex & 0x01) ? 0x1000 : 0x0000) + ((sprite.tileIndex & 0xFE) << 4);
+				tileIndex = ((sprite.tileIndex & 0x01) ? 0x100 : 0x000) + (sprite.tileIndex & 0xFE);
 				tileY = sprite.vFlip ? (15 - this.scanLine + sprite.y) : (this.scanLine - sprite.y);
 			}
 
@@ -732,9 +761,9 @@ export class PPU {
 			// const tileH = this.ReadByte(address + 8);
 
 			// Generate sprite pixels
-			for (let i = 0; i < LineMaxSprite; i++) {
-				let pixel = this.lineSpritePixels[sprite.x + i];
-				tileX = sprite.hFlip ? BitValue[i] : BitValueRev[i];
+			for (let i = 0; i < 8; i++) {
+				const pixel = this.lineSpritePixels[sprite.x + i];
+				const x = sprite.hFlip ? i : 7 - i;
 
 				if (pixel.used && (pixel.paletteIndex & 3) !== 0) {
 					continue;
@@ -742,7 +771,7 @@ export class PPU {
 
 				pixel.hideInBG = sprite.hideInBg;
 				pixel.isZero = sprite.isZero;
-				pixel.paletteIndex = (sprite.paletteIndex << 4) | tile.GetData(tileX, tileY);
+				pixel.paletteIndex = (sprite.paletteIndex << 4) | tile.GetData(x, tileY);
 				pixel.used = true;
 			}
 		}

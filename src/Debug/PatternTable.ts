@@ -60,6 +60,9 @@ export class PatternTable {
 		y = PixWidth * 8 * 16;
 		for (let i = 0; i < this.bus.ppu.paletteTable.length; i++) {
 			let index = this.bus.ppu.paletteTable[i];
+			if ((i & 3) === 0)
+				index = this.bus.ppu.paletteTable[0];
+
 			this.DrawColor(x, y, ColorTableWidth, NesColorsStr[index]);
 			x += ColorTableWidth;
 			if ((i & 0xF) === 0xF) {

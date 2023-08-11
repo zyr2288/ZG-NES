@@ -36,7 +36,7 @@ export class Mapper2 implements IMapper {
 		if (address < 0x8000)
 			return;
 
-		this.bus.cartridge.prgIndex[0] = value;
+		this.bus.cartridge.prgIndex[0] = value & 0xF;
 	}
 
 	ReadCHR(address: number): number {

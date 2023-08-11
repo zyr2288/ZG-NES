@@ -1,16 +1,23 @@
-import { Bus } from "../Bus";
 import { NesColorRGB } from "../NESConst";
+
+const ScreenWidth = 256;
+const ScreenHeight = 240;
+const Scale = 3;
 
 export class Screen {
 
 	content: CanvasRenderingContext2D;
 	imageData: ImageData;
+	private canvas: HTMLCanvasElement;
 
 	constructor(canvas: HTMLCanvasElement) {
-		canvas.width = 256;
-		canvas.height = 240;
+		this.canvas = canvas;
+		canvas.width = ScreenWidth * Scale;
+		canvas.height = ScreenHeight * Scale;
 		this.content = canvas.getContext("2d")!;
-		this.imageData = new ImageData(256, 240);
+		this.content.scale(Scale, Scale);
+
+		this.imageData = new ImageData(ScreenWidth, ScreenHeight);
 	}
 
 	SetPixels(data: Uint8Array) {
@@ -25,5 +32,6 @@ export class Screen {
 		}
 
 		this.content.putImageData(this.imageData, 0, 0);
+		this.content.drawImage(this.canvas, 0, 0);
 	}
 }

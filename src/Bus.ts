@@ -11,10 +11,10 @@ export class Bus {
 	ppu!: PPU;
 	debug!: DebugUtils;
 
-	frameCpuClock: number = CPUFrameClock.NTSC;
+	endFrame = false;
+
 	private cpuClockRate: number = ClockRate.NTSC;
 	private machineType: MachineType = MachineType.NSTC;
-
 	private systemClockCount = 0;
 
 	Reset() {
@@ -33,6 +33,9 @@ export class Bus {
 			this.systemClockCount++;
 		}
 	}
+
+	StartFrame() { this.endFrame = false; }
+	EndFrame() { this.endFrame = true; }
 
 	ReadByte(address: number) {
 		if (address < 0x2000)
@@ -59,7 +62,7 @@ export class Bus {
 			return;
 		}
 
-		if (address >= 0x2000 && address <= 0x2007) {
+		if (address >= 0x2000 && address <= 0x2007 || address === 0x4014) {
 			this.ppu.Write(address, value);
 			return;
 		}

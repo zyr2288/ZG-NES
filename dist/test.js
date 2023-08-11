@@ -1,7 +1,10 @@
 let screen = document.getElementById("screen");
 let pattern = document.getElementById("pattern");
+let disasm = document.getElementById("disasm")
+let register = document.getElementById("register");
+let flagDiv = document.getElementById("flagDiv");
 
-var nes = new NES({ screen, pattern });
+var nes = new NES({ screen, pattern, disasm, register, flagDiv });
 
 async function OpenFile() {
 	// @ts-ignore
@@ -51,4 +54,10 @@ function OneFrame() {
 	nes.bus.debug.diassembler?.Update();
 	nes.bus.debug.patternTable?.Update();
 	nes.OneFrame();
+}
+
+function Run() {
+	setInterval(() => {
+		nes.OneFrame();
+	}, 1000 / 60);
 }

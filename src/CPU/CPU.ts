@@ -66,6 +66,8 @@ export class CPU {
 	private addressModeMap!: Map<AddressingMode, Function>;
 	private readonly bus: Bus;
 
+	private debug = { lastPC: 0 };
+
 	constructor(bus: Bus) {
 		this.bus = bus;
 		this.bus.cpu = this;
@@ -104,6 +106,9 @@ export class CPU {
 			this.cycle--;
 			return false;
 		}
+		// this.debug.lastPC = this.registers.pc;
+		// if (this.registers.pc === 0x8270)
+		// 	debugger;
 
 		const opcode = this.bus.ReadByte(this.registers.pc++);
 		if (opcode === 0)
@@ -135,24 +140,28 @@ export class CPU {
 
 		instrFunc.call(this);
 		this.cycle += entry.cycles;
+
 		this.registers.pc &= 0xFFFF;
 
 		this.addrData.crossPage = false;
 		this.addrData.address = -1;
 		this.addrData.data = -1;
+
 		return true;
 	}
 	//#endregion 单步
 
-	//#region NMI
+	//#region NMI/IRQ
 	NMI() {
 		this.PushWord(this.registers.pc);
 		this.PushByte(this.registers.p);
 
 		this.SetFlag(Flags.FlagI, true);
 		this.registers.pc = this.bus.ReadWord(NMI);
+
+		this.cycle += 7;
 	}
-	//#endregion NMI
+	//#endregion NMI/IRQ
 
 	/***** private *****/
 
@@ -278,7 +287,6 @@ export class CPU {
 
 	private SetFlag(flag: Flags, value: boolean): void {
 		this.flags[flag] = value;
-
 		// if (value) {
 		// 	this.registers.p |= flag;
 		// } else {
@@ -394,7 +402,7 @@ export class CPU {
 		data = data & 0xFF;
 		this.SetNZFlag(data);
 
-		if (this.addrData.data >= 0) {
+		if (this.addrData.address < 0) {
 			this.registers.a = data;
 		} else {
 			this.bus.WriteByte(this.addrData.address, data);
@@ -620,7 +628,7 @@ export class CPU {
 		this.addrData.temp >>= 1;
 		this.SetNZFlag(this.addrData.temp);
 
-		if (this.addrData.address >= 0) {
+		if (this.addrData.address < 0) {
 			this.registers.a = this.addrData.temp;
 		} else {
 			this.bus.WriteByte(this.addrData.address, this.addrData.temp);
@@ -678,7 +686,7 @@ export class CPU {
 		this.addrData.temp = (this.addrData.temp << 1 | (this.IsFlagSet(Flags.FlagC) ? 1 : 0)) & 0xFF;
 		this.SetNZFlag(this.addrData.temp);
 
-		if (this.addrData.address >= 0) {
+		if (this.addrData.address < 0) {
 			this.registers.a = this.addrData.temp;
 		} else {
 			this.bus.WriteByte(this.addrData.address, this.addrData.temp);

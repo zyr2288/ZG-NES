@@ -29,12 +29,11 @@ export class NES {
 
 	/**执行一帧 */
 	OneFrame() {
+		this.bus.StartFrame();
 		while (true) {
 			this.bus.Clock();
-			if (this.bus.cpu.clock >= this.bus.frameCpuClock) {
-				this.bus.cpu.clock -= this.bus.frameCpuClock;
+			if (this.bus.endFrame)
 				break;
-			}
 		}
 		this.screen?.SetPixels(this.bus.ppu.screenPixels);
 	}
@@ -42,7 +41,7 @@ export class NES {
 	LoadFile(data: ArrayBuffer) {
 		let temp = new Uint8Array(data);
 		this.bus.cartridge.LoadRom(temp);
-		this.bus.cpu.Reset();
+		this.Reset();
 	}
 
 	/**更新调色板信息 */
