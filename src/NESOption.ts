@@ -4,4 +4,6 @@ export interface NESOption {
 	disasm?: HTMLDivElement;
 	register?: HTMLDivElement;
 	flagDiv?: HTMLDivElement;
+	info?: HTMLDivElement;
+	sampleRate?: number;
 }

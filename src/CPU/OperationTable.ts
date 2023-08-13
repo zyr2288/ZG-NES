@@ -316,6 +316,15 @@ export const OperationTable: Array<IOpcodeEntry | undefined> = [
 	RegisterOpcode(Instruction.ISC, AddressingMode.ABSOLUTE_X, 3, 7, 0),			// 255, FFh
 ];
 
+/**
+ * 
+ * @param instruction 操作指令
+ * @param addressingMode 寻址方式
+ * @param bytes 总长度
+ * @param cycles CPU 周期
+ * @param pageCycles 越页 CPU 周期
+ * @returns 
+ */
 function RegisterOpcode(instruction: Instruction, addressingMode: AddressingMode, bytes: number, cycles: number, pageCycles: number) {
 	return {
 		instruction,

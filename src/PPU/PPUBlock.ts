@@ -52,9 +52,9 @@ export class Sprite {
 
 export class RenderSprite {
 	paletteIndex = 0;
-	used = false;
 	isZero = false;
 	hideInBG = false;
+	used = false;
 }
 
 export class Tile {

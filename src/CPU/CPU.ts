@@ -88,7 +88,7 @@ export class CPU {
 		this.registers.p = 0x34;
 
 		this.cycle = 0;
-		this.cycle = 0;
+		this.clock = 0;
 
 		this.breaks.irq = this.bus.ReadWord(0xFFFE);
 		this.breaks.nmi = this.bus.ReadWord(0xFFFA);
@@ -102,12 +102,11 @@ export class CPU {
 	//#region 单步
 	Clock() {
 		this.clock++;
-		if (this.cycle !== 0) {
-			this.cycle--;
+		if (--this.cycle > 0)
 			return false;
-		}
+		
 		// this.debug.lastPC = this.registers.pc;
-		// if (this.registers.pc === 0x8270)
+		// if (this.registers.pc === 0xC8EE)
 		// 	debugger;
 
 		const opcode = this.bus.ReadByte(this.registers.pc++);
@@ -287,11 +286,11 @@ export class CPU {
 
 	private SetFlag(flag: Flags, value: boolean): void {
 		this.flags[flag] = value;
-		// if (value) {
-		// 	this.registers.p |= flag;
-		// } else {
-		// 	this.registers.p &= ~flag;
-		// }
+		if (value) {
+			this.registers.p |= flag;
+		} else {
+			this.registers.p &= ~flag;
+		}
 	}
 
 	private IsFlagSet(flag: Flags): boolean {
@@ -624,7 +623,7 @@ export class CPU {
 	private LSR(): void {
 		this.addrData.temp = this.GetData();
 
-		this.SetFlag(Flags.FlagC, !!(this.addrData.temp & 0x01));
+		this.SetFlag(Flags.FlagC, (this.addrData.temp & 0x01) === 1);
 		this.addrData.temp >>= 1;
 		this.SetNZFlag(this.addrData.temp);
 
@@ -681,9 +680,10 @@ export class CPU {
 
 	private ROL(): void {
 		this.addrData.temp = this.GetData();
+		const isCarry = this.IsFlagSet(Flags.FlagC);
 		this.SetFlag(Flags.FlagC, !!(this.addrData.temp & 0x80));
 
-		this.addrData.temp = (this.addrData.temp << 1 | (this.IsFlagSet(Flags.FlagC) ? 1 : 0)) & 0xFF;
+		this.addrData.temp = ((this.addrData.temp << 1) | (isCarry ? 1 : 0)) & 0xFF;
 		this.SetNZFlag(this.addrData.temp);
 
 		if (this.addrData.address < 0) {

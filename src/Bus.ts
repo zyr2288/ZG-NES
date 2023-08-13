@@ -1,15 +1,19 @@
 import { CPU } from "./CPU/CPU";
+import { PPU } from "./PPU/PPU";
+import { APU } from "./Audio/APU/APU";
 import { Cartridge } from "./CPU/Cartridge";
 import { DebugUtils } from "./Debug/DebugUtils";
-import { CPUFrameClock, ClockRate, MachineType } from "./NESConst";
-import { PPU } from "./PPU/PPU";
+import { Controller } from "./Input/Controller";
+import { ClockRate, MachineType } from "./NESConst";
 
 export class Bus {
 
 	cpu!: CPU;
-	cartridge!: Cartridge;
 	ppu!: PPU;
+	apu!: APU;
+	cartridge!: Cartridge;
 	debug!: DebugUtils;
+	controller!: Controller;
 
 	endFrame = false;
 
@@ -24,13 +28,15 @@ export class Bus {
 
 	Clock() {
 		while (true) {
+			this.systemClockCount++;
 			this.ppu.Clock();
 			if (this.systemClockCount >= this.cpuClockRate) {
 				this.systemClockCount -= this.cpuClockRate;
-				if (this.cpu.Clock())
+				if (this.cpu.Clock()) {
+					this.apu.Clock();
 					break;
+				}
 			}
-			this.systemClockCount++;
 		}
 	}
 
@@ -42,7 +48,10 @@ export class Bus {
 			return this.cpu.ram[address & 0x7FF];
 
 		if (address >= 0x2000 && address <= 0x2007)
-			return this.ppu.Read(address);
+			return this.ppu.ReadIO(address);
+
+		if (address === 0x4016 || address === 0x4017)
+			return this.controller.ReadIO(address);
 
 		if (address < 0x8000)
 			return this.cartridge.useSRAM ? 0 : this.cpu.sram[address & 0x1FFF];
@@ -63,7 +72,17 @@ export class Bus {
 		}
 
 		if (address >= 0x2000 && address <= 0x2007 || address === 0x4014) {
-			this.ppu.Write(address, value);
+			this.ppu.WriteIO(address, value);
+			return;
+		}
+
+		if (address >= 0x4000 && address <= 0x4015) {
+			this.apu.WriteIO(address, value);
+			return;
+		}
+
+		if (address === 0x4016) {
+			this.controller.WriteIO(address, value);
 			return;
 		}
 

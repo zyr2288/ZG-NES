@@ -3,8 +3,27 @@ let pattern = document.getElementById("pattern");
 let disasm = document.getElementById("disasm")
 let register = document.getElementById("register");
 let flagDiv = document.getElementById("flagDiv");
+let info = document.getElementById("info");
 
-var nes = new NES({ screen, pattern, disasm, register, flagDiv });
+let audio = new AudioContext();
+
+let option = {
+	start: false
+}
+
+let nes = new NES({ screen, pattern, disasm, register, flagDiv, info, sampleRate: audio.sampleRate });
+let processor = audio.createScriptProcessor(1024, 0, 1);
+processor.onaudioprocess = (ev) => {
+	if (!option.start)
+		return;
+
+	const outputData = ev.outputBuffer.getChannelData(0);
+	if (nes.OutputAudio(outputData)) {
+		nes.OneFrame();
+	}
+}
+
+processor.connect(audio.destination);
 
 async function OpenFile() {
 	// @ts-ignore
@@ -37,11 +56,13 @@ function OpenFileDialog(accept) {
 }
 
 function Test() {
-	let canvas = document.getElementById("pattern");
-	let disasm = document.getElementById("disasm");
-	let register = document.getElementById("register");
-	let flagDiv = document.getElementById("flagDiv");
-	nes.SetDebug({ canvas, disasm, register, flagDiv });
+	// let canvas = document.getElementById("pattern");
+	// let disasm = document.getElementById("disasm");
+	// let register = document.getElementById("register");
+	// let flagDiv = document.getElementById("flagDiv");
+	// nes.SetDebug({ canvas, disasm, register, flagDiv });
+	audio.resume();
+
 }
 
 function Step() {
@@ -57,7 +78,8 @@ function OneFrame() {
 }
 
 function Run() {
-	setInterval(() => {
-		nes.OneFrame();
-	}, 1000 / 60);
+	option.start = true;
+	// setInterval(() => {
+	// 	nes.OneFrame();
+	// }, 1000 / 60);
 }
