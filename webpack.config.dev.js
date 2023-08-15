@@ -5,7 +5,7 @@ const path = require('path');
 /** @type WebpackConfig */
 module.exports = {
 	entry: {
-		"entry": "./src/Test/Index.ts"
+		"bundle": "./src/Test/Index.ts"
 	},
 	mode: "development",
 	module: {
