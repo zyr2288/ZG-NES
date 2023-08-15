@@ -1,4 +1,4 @@
-import { Bus } from "../../../Bus";
+import { Bus } from "../../Bus";
 import { PulseTable } from "./2A03Const";
 import { DPCM } from "./DPCM";
 import { Pulse } from "./Pulse";
@@ -53,11 +53,12 @@ export class C2A03 {
 
 	Clock() {
 		this.clock++;
-
 		if (this.clock & 0x01) {
 			this.pulse1.Clock();
 			this.pulse2.Clock();
 		}
+
+		this.clock &= 0xFF;
 	}
 
 	GetOutput() {

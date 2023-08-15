@@ -25,7 +25,7 @@ export class InputAPI {
 	private inputType: InputType = InputType.StandardController;
 	private readonly bus: Bus;
 
-	constructor(bus: Bus, option: { screen: HTMLCanvasElement }) {
+	constructor(bus: Bus) {
 		this.bus = bus;
 		window.addEventListener("keydown", (ev) => {
 			this.CheckStandardController(ev, true);

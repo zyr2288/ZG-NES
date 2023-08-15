@@ -108,8 +108,9 @@ export class BlipBuf {
 
 	SetSampleRate(clockRate: number, sampleRate: number) {
 		const commonValue = [11025, 22050, 24000, 44100, 48000];
-		if (!commonValue.includes(sampleRate))
-			return;
+		if (!commonValue.includes(sampleRate)) {
+			throw Error("采样率不对");
+		}
 
 		let factor = Math.floor(TimeUnit * sampleRate / clockRate);
 		this.blipT.factor = factor;
@@ -160,7 +161,7 @@ export class BlipBuf {
 		// buf_t* out = SAMPLES( m ) + m->avail + (fixed >> frac_bits);
 		//let phase = fixed >> PhaseShift & (PhaseCount - 1);
 		const PhaseShift = FracBits - PhaseBits;
-		let phase = fixed >> PhaseShift & (PhaseCount - 1);
+		const phase = fixed >> PhaseShift & (PhaseCount - 1);
 
 		const currect = BlStep[phase];
 		const nexSteps = BlStep[phase + 1];
@@ -169,13 +170,12 @@ export class BlipBuf {
 		const preRevPrt = BlStep[PhaseCount - phase - 1];
 
 		//let interp = fixed >> (PhaseShift - DeltaBits) & (DeltaUnit - 1);
-		let interp = fixed >> (PhaseShift - DeltaBits) & (DeltaUnit - 1);
-		let delta2 = (delta * interp) >> DeltaBits;
+		const interp = fixed >> (PhaseShift - DeltaBits) & (DeltaUnit - 1);
+		const delta2 = (delta * interp) >> DeltaBits;
 		delta -= delta2;
 
 		for (let i = 0; i < HalfWidth; i++)
 			this.blipT.buffer[i + bufferStart] += currect[i] * delta + nexSteps[i] * delta2;
-
 
 		bufferStart += HalfWidth;
 		for (let i = 0; i < HalfWidth; i++)
@@ -210,8 +210,7 @@ export class BlipBuf {
 		let interp = fixed >> 5 & (DeltaUnit - 1);
 		let delta2 = delta * interp;
 
-		this.blipT.buffer[bufferStart + 7] += delta *
-			- delta2;
+		this.blipT.buffer[bufferStart + 7] += delta * -delta2;
 		this.blipT.buffer[bufferStart + 8] += delta2;
 	}
 

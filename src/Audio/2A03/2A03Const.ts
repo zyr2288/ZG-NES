@@ -10,6 +10,10 @@ export const DutyTable = [
 	[1, 1, 1, 1, 1, 1, 0, 0],
 ];
 
+export const NOISE_PEROID_TABLE = [
+	4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068,
+];
+
 export const TriangleVolumeTable = [
 	15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
 	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
@@ -22,12 +26,14 @@ export const DMCTable = [
 export const PulseTable: number[] = [];
 export const TndTable: number[] = [];
 
+const Zoom = 10000;
+
 let length = 16 * 2;
 for (let i = 0; i < length; i++) {
-	PulseTable[i] = 95.52 / (8128.0 / i + 100)
+	PulseTable[i] = Math.floor((95.52 / (8128.0 / i + 100)) * Zoom);
 }
 
 length = 16 + 16 + 128;
 for (let i = 0; i < length; i++) {
-	TndTable[i] = 163.67 / (24329.0 / i + 100)
+	TndTable[i] = Math.floor((163.67 / (24329.0 / i + 100)) * Zoom);
 }

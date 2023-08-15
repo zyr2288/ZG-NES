@@ -1,10 +1,11 @@
 import { CPU } from "./CPU/CPU";
 import { PPU } from "./PPU/PPU";
-import { APU } from "./Audio/APU/APU";
+import { APU } from "./Audio/APU";
 import { Cartridge } from "./CPU/Cartridge";
 import { DebugUtils } from "./Debug/DebugUtils";
 import { Controller } from "./Input/Controller";
 import { ClockRate, MachineType } from "./NESConst";
+import { API } from "./Interface/API";
 
 export class Bus {
 
@@ -12,8 +13,10 @@ export class Bus {
 	ppu!: PPU;
 	apu!: APU;
 	cartridge!: Cartridge;
-	debug!: DebugUtils;
 	controller!: Controller;
+
+	debug?: DebugUtils;
+	api!: API;
 
 	endFrame = false;
 
@@ -32,8 +35,8 @@ export class Bus {
 			this.ppu.Clock();
 			if (this.systemClockCount >= this.cpuClockRate) {
 				this.systemClockCount -= this.cpuClockRate;
+				this.apu.Clock();
 				if (this.cpu.Clock()) {
-					this.apu.Clock();
 					break;
 				}
 			}

@@ -5,7 +5,6 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>测试</title>
-	<script src="bundle.js"></script>
 	<style>
 		canvas {
 			border: 1px solid #000;
@@ -29,11 +28,11 @@
 </head>
 
 <body>
-	<button onclick="OpenFile()">打开文件</button>
-	<button onclick="Test()">测试</button>
-	<button onclick="Step()">单步</button>
-	<button onclick="OneFrame()">一帧</button>
-	<button onclick="Run()">运行</button>
+	<button id="btn-openFile">打开文件</button>
+	<button id="btn-test">测试</button>
+	<button id="btn-step">单步</button>
+	<button id="btn-oneFrame">一帧</button>
+	<button id="btn-run">运行</button>
 	<div class="main">
 		<canvas id="screen"></canvas>
 		<div class="debug">
@@ -44,7 +43,7 @@
 			<div id="info"></div>
 		</div>
 	</div>
-	<script src="test.js"></script>
+	<script src="entry.js"></script>
 </body>
 
 </html>

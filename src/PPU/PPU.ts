@@ -474,6 +474,7 @@ export class PPU {
 			if (this.scanLine > 261) {
 				this.scanLine = 0;
 				this.frame++;
+				this.bus.api.OnFrame?.(this.screenPixels);
 				this.bus.EndFrame();
 			}
 		}

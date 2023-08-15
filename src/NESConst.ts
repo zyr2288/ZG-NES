@@ -1,3 +1,4 @@
+// export const CPU_NTSC = 1789773;
 export const CPU_NTSC = 1789772.7272;
 export const CPU_PAL = 1662607.03;
 export const CPU_Dendy = 1773448.0;

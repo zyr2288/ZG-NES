@@ -1,4 +1,4 @@
-import { Bus } from "../../../Bus";
+import { Bus } from "../../Bus";
 
 export class DPCM {
 

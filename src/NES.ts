@@ -1,36 +1,33 @@
-import { APU } from "./Audio/APU/APU";
+import { APU } from "./Audio/APU";
 import { Bus } from "./Bus";
 import { CPU } from "./CPU/CPU";
 import { Cartridge } from "./CPU/Cartridge";
 import { DebugUtils } from "./Debug/DebugUtils";
 import { Controller } from "./Input/Controller";
 import { InputAPI } from "./Input/InputAPI";
+import { API } from "./Interface/API";
 import { NESOption } from "./NESOption";
 import { PPU } from "./PPU/PPU";
-import { Screen } from "./PPU/Screen";
 
 export class NES {
 
 	bus: Bus;
 	inputAPI: InputAPI;
-	screen?: Screen;
 
 	private info?: HTMLDivElement;
 
-	constructor(option: NESOption) {
+	constructor(option?: NESOption) {
 		this.bus = new Bus();
 		new CPU(this.bus);
 		new PPU(this.bus);
 		new APU(this.bus, option);
 		new Cartridge(this.bus);
-		new DebugUtils(this.bus);
 		new Controller(this.bus);
+		new API(this.bus, option);
 
-		this.screen = new Screen(option.screen);
-		this.inputAPI = new InputAPI(this.bus, option);
-		this.SetDebug(option);
+		// new DebugUtils(this.bus);
 
-		this.info = option.info;
+		this.inputAPI = new InputAPI(this.bus);
 	}
 
 	Reset() {
@@ -47,10 +44,6 @@ export class NES {
 			if (this.bus.endFrame)
 				break;
 		}
-		this.screen?.SetPixels(this.bus.ppu.screenPixels);
-		if (this.info)
-			this.info.innerText = this.bus.cpu.clock.toString();
-		// console.log(this.bus.cpu.ram[0x04], this.bus.cpu.ram[0xF1]);
 	}
 
 	LoadFile(data: ArrayBuffer) {
@@ -61,16 +54,15 @@ export class NES {
 
 	/**更新调色板信息 */
 	SetDebug(option: NESOption) {
-		this.bus.debug.SetPatternCanvas(option);
-		this.bus.debug.SetDisassemblerDiv(option);
+		this.bus.debug?.SetPatternCanvas(option);
+		this.bus.debug?.SetDisassemblerDiv(option);
 	}
 
 	OutputAudio(out: Float32Array) {
 		this.bus.apu.blipBuf.ReadSample(out.length, false);
-		for (let i = 0; i < out.length; i++) {
+		for (let i = 0; i < out.length; i++)
 			out[i] = this.bus.apu.blipBuf.outBuffer[i] / 32768;
-		}
-
-		return this.bus.apu.blipBuf.BufAvail < out.length;
+		
+		return out.length - this.bus.apu.blipBuf.BufAvail;
 	}
 }
