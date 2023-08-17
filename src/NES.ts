@@ -38,6 +38,9 @@ export class NES {
 
 	/**执行一帧 */
 	OneFrame() {
+		if (!this.bus.endFrame)
+			return;
+
 		this.bus.StartFrame();
 		while (true) {
 			this.bus.Clock();

@@ -18,7 +18,7 @@ export class Bus {
 	debug?: DebugUtils;
 	api!: API;
 
-	endFrame = false;
+	endFrame = true;
 
 	private cpuClockRate: number = ClockRate.NTSC;
 	private machineType: MachineType = MachineType.NSTC;

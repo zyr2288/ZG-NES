@@ -1,27 +1,52 @@
 import { Bus } from "../../Bus";
-import { PulseTable } from "./2A03Const";
+import { BlipBuf } from "../BlipBuf";
+import { PulseTable, TndTable } from "./2A03Const";
 import { DPCM } from "./DPCM";
+import { Noise } from "./Noise";
 import { Pulse } from "./Pulse";
+import { Triangle } from "./Triangle";
 
-const NTSCStep = [3728.5, 7456.5, 11185.5, 14914.5, 18640.5];
+const NTSCStep = [3728.5, 7456.5, 11185.5, 14914.5];
 const PALStep = [4156.5, 8313.5, 12469.5, 16626.5, 20782.5];
 
+// const Zoom = [0.00752, 752, 0.00851, 0.00494, 0.00335];
+const Zoom = [752, 752, 851, 494, 335];
+// for (let i = 0; i < Zoom.length; i++)
+// 	Zoom[i] *= 20000;
+
+export enum ChannelName { Pulse1, Pulse2, Triangle, Noise, DPCM }
 export class C2A03 {
 
-	frameCounter = 0;
-	mode = 4;
 	irqEnable = true;
 	interruptFlag = false;
 
 	private clock = 0;
+	private frameCounter = 0;
+	private fourStepMode = 4;
+	private stepLookupTable: number[] = [];
+
 	private pulse1: Pulse;
 	private pulse2: Pulse;
+	private triangle: Triangle;
+	private noise: Noise;
 	private dpcm: DPCM;
 
+	private bus: Bus;
+
+	private lastAmps: number[] = [];
+
 	constructor(bus: Bus) {
-		this.pulse1 = new Pulse(0);
-		this.pulse2 = new Pulse(1);
-		this.dpcm = new DPCM(bus);
+		this.bus = bus;
+		this.pulse1 = new Pulse(this, 0);
+		this.pulse2 = new Pulse(this, 1);
+		this.triangle = new Triangle(this);
+		this.noise = new Noise(this);
+		this.dpcm = new DPCM(bus, this);
+		this.stepLookupTable = NTSCStep.map(value => value * 2);
+	}
+
+	Reset() {
+		this.stepLookupTable = NTSCStep.map(value => value * 2);
 	}
 
 	WriteIO(address: number, value: number) {
@@ -38,14 +63,35 @@ export class C2A03 {
 			case 0x4007:
 				this.pulse2.WriteIO(address, value);
 				break;
+			case 0x4008:
+			// case 0x4009:
+			case 0x400A:
+			case 0x400B:
+				this.triangle.WriteIO(address, value);
+				break;
+			case 0x400C:
+			case 0x400D:
+			case 0x400E:
+			case 0x400F:
+				this.noise.WriteIO(address, value);
+				break;
+			case 0x4010:
+			case 0x4011:
+			case 0x4012:
+			case 0x4013:
+				this.dpcm.WriteIO(address, value);
+				break;
 			case 0x4015:
 				this.pulse1.enable = (value & 1) !== 0;
 				this.pulse2.enable = (value & 2) !== 0;
+				this.triangle.enable = (value & 4) !== 0;
+				this.noise.enable = (value & 8) !== 0;
+				this.dpcm.enable = (value & 0x10) !== 0;
 
 				this.interruptFlag = false;
 				break;
 			case 0x4017:
-				this.mode = value >> 7;
+				this.fourStepMode = (value & 0x80) === 0 ? 4 : 5;
 				this.irqEnable = (value & 0x40) !== 0;
 				break;
 		}
@@ -54,63 +100,115 @@ export class C2A03 {
 	Clock() {
 		this.clock++;
 		if (this.clock & 0x01) {
-			this.pulse1.Clock();
-			this.pulse2.Clock();
+			this.pulse1.ClockRate();
+			this.pulse2.ClockRate();
 		}
+		this.triangle.ClockRate();
+		this.noise.ClockRate();
+		this.dpcm.ClockRate();
 
-		this.clock &= 0xFF;
+		this.ProcessFrameCounter();
 	}
 
-	GetOutput() {
-		let value = PulseTable[this.pulse1.volume + this.pulse2.volume];
-		return value;
+	// GetOutput() {
+	// 	let value = PulseTable[this.pulse1.outValue + this.pulse2.outValue];
+	// 	value += TndTable[3 * this.triangle.outValue + 2 * this.noise.outValue + this.dpcm.outValue];
+	// 	return value;
+	// }
+
+	// Render() {
+	// 	let value = 0.00752 * (this.pulse1.outValue + this.pulse2.outValue);
+	// 	value += 0.00851 * this.triangle.outValue + 0.00494 * this.noise.outValue + 0.00335 * this.dpcm.outValue
+	// 	value *= 50000;
+	// 	return value;
+	// }
+
+	ResetDPCMAmp(value: number) {
+		this.lastAmps[ChannelName.DPCM] = value >>> 1;
 	}
 
-	private processFrameCounter(): void {
-		if (this.mode === 0) { // 4 Step mode
-			switch (this.frameCounter % 4) {
+	EndFrame() {
+		// this.frameCounter = 0;
+		// this.clock = 0;
+	}
+
+	UpdateAmp(value: number, channel: ChannelName) {
+		const delta = this.lastAmps[channel] - value;
+		this.lastAmps[channel] = value;
+		if (delta === 0)
+			return;
+
+		this.bus.apu.blipBuf.BlipAddDelta(this.bus.apu.clock, delta * Zoom[channel]);
+	}
+
+	private ProcessFrameCounter() {
+		if (this.clock < this.stepLookupTable[this.frameCounter])
+			return;
+
+		let end = false;
+		if (this.fourStepMode === 4) { // 4 Step mode
+			switch (this.frameCounter) {
 				case 0:
-					this.processEnvelopeAndLinearCounter();
+					this.ProcessEnvelopeAndLinearCounter();
 					break;
 				case 1:
-					// this.processLengthCounterAndSweep();
-					this.processEnvelopeAndLinearCounter();
+					this.ProcessLengthCounterAndSweep();
+					this.ProcessEnvelopeAndLinearCounter();
 					break;
 				case 2:
-					this.processEnvelopeAndLinearCounter();
+					this.ProcessEnvelopeAndLinearCounter();
 					break;
 				case 3:
-					this.triggerIRQ();
-					this.processEnvelopeAndLinearCounter();
+					this.TriggerIRQ();
+					this.ProcessLengthCounterAndSweep();
+					this.ProcessEnvelopeAndLinearCounter();
+					end = true;
 					break;
 			}
 		} else { // 5 Step mode
-			switch (this.frameCounter % 5) {
+			switch (this.frameCounter) {
 				case 0:
-					this.processEnvelopeAndLinearCounter();
+					this.ProcessEnvelopeAndLinearCounter();
 					break;
 				case 1:
-					this.processEnvelopeAndLinearCounter();
+					this.ProcessEnvelopeAndLinearCounter();
 					break;
 				case 2:
-					this.processEnvelopeAndLinearCounter();
+					this.ProcessEnvelopeAndLinearCounter();
 					break;
 				case 3:
 					break;
 				case 4:
-					this.processEnvelopeAndLinearCounter();
+					this.ProcessEnvelopeAndLinearCounter();
+					end = true;
 					break;
 			}
 		}
+
+		this.frameCounter++;
+		if (end) {
+			this.clock = 0;
+			this.frameCounter = 0;
+		}
 	}
 
-	private processEnvelopeAndLinearCounter(): void {
+	private ProcessEnvelopeAndLinearCounter(): void {
 		this.pulse1.ProcessEnvelope();
 		this.pulse2.ProcessEnvelope();
-
+		this.triangle.DoLinerClock();
 	}
 
-	private triggerIRQ(): void {
+	private ProcessLengthCounterAndSweep(): void {
+		this.pulse1.ProcessLengthCounter();
+		this.pulse1.ProcessSweep();
+
+		this.pulse2.ProcessLengthCounter();
+		this.pulse2.ProcessSweep();
+
+		this.triangle.DoFrameClock();
+	}
+
+	private TriggerIRQ(): void {
 		if (!this.irqEnable) {
 			return;
 		}

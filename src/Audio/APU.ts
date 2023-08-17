@@ -14,11 +14,11 @@ export class APU {
 	readonly blipBuf: BlipBuf;
 
 	out: OutBuffer;
+	clock = 0;
 
 	private lastAmp = 0;
 	private c2A03: C2A03;
 	private readonly bus: Bus;
-	private clock = 0;
 
 	private sampleRate: number;
 	private sampleLength: number;
@@ -41,6 +41,7 @@ export class APU {
 
 	Reset() {
 		this.blipBuf.SetSampleRate(CPU_NTSC, this.sampleRate);
+		this.c2A03.Reset();
 	}
 
 	Clock() {
@@ -48,18 +49,15 @@ export class APU {
 
 		this.c2A03.Clock();
 
-		let value = this.c2A03.GetOutput();
-		const delta = this.lastAmp - value;
-		if (delta !== 0) {
-			this.blipBuf.BlipAddDelta(this.clock, delta);
-			this.lastAmp = value;
-		}
+		// let value = this.c2A03.Render();
+		// const delta = this.lastAmp - value;
+		// if (delta !== 0) {
+		// 	this.blipBuf.BlipAddDelta(this.clock, delta);
+		// 	this.lastAmp = value;
+		// }
 
 		if (this.bus.endFrame) {
-			this.blipBuf.BlipEndFrame(this.clock);
-			this.ReadBuffer();
-			this.bus.api.OnAudio?.(this.out);
-			this.clock = 0;
+			this.EndFrame();
 		}
 	}
 
@@ -70,9 +68,6 @@ export class APU {
 		}
 	}
 
-
-
-
 	ReadBuffer() {
 		this.out.length = this.blipBuf.BufAvail;
 		const length = this.blipBuf.BufAvail;
@@ -81,5 +76,13 @@ export class APU {
 		for (let i = 0; i < length; i++)
 			this.out.buffer[i] = this.blipBuf.outBuffer[i];
 
+	}
+
+	private EndFrame() {
+		this.blipBuf.BlipEndFrame(this.clock);
+		this.ReadBuffer();
+		this.c2A03.EndFrame();
+		this.bus.api.OnAudio?.(this.out);
+		this.clock = 0;
 	}
 }

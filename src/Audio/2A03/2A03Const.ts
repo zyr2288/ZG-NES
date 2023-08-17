@@ -1,17 +1,6 @@
-export const LengthTable = [
+export const FrameCountLength = [
 	10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 60, 10, 14, 12, 26, 14,
 	12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30
-];
-
-export const DutyTable = [
-	[0, 0, 0, 0, 0, 0, 0, 1],
-	[0, 0, 0, 0, 0, 0, 1, 1],
-	[0, 0, 0, 0, 1, 1, 1, 1],
-	[1, 1, 1, 1, 1, 1, 0, 0],
-];
-
-export const NOISE_PEROID_TABLE = [
-	4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068,
 ];
 
 export const TriangleVolumeTable = [
@@ -26,7 +15,7 @@ export const DMCTable = [
 export const PulseTable: number[] = [];
 export const TndTable: number[] = [];
 
-const Zoom = 10000;
+const Zoom = 50000;
 
 let length = 16 * 2;
 for (let i = 0; i < length; i++) {

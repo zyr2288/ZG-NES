@@ -1,4 +1,5 @@
-import { LengthTable, NOISE_PEROID_TABLE as NoiseTable } from "./2A03Const";
+import { FrameCountLength } from "./2A03Const";
+import { C2A03, ChannelName } from "./C2A03";
 
 export class Noise {
 
@@ -6,27 +7,41 @@ export class Noise {
 	private readonly NoiseWaveLengthLookup_PAL = [4, 8, 14, 30, 60, 88, 118, 148, 188, 236, 354, 472, 708, 944, 1890, 3778];
 
 	enable = false;
-	public volume = 0; // 4bit
+	outValue = 0; // 4bit
+
+	private envelope = {
+		/**恒定音量 (true): 使用包络的音量 (false): 使用恒定音量 */
+		enable: false,
+		/**是否循环 */
+		loop: false,
+		/**衰减率 */
+		decayRate: 0,
+		/**衰减计数器 */
+		decayCounter: 0,
+		/**包络音量 */
+		volume: 0,
+	};
+
 	public lengthCounter = 0;
-
-	private isLengthCounterHalt = false;
-	private isConstantVolume = false;
-	private envelopeValue = 0;
-	private envelopeVolume = 0;
-	private envelopeCounter = 0;
-
-	private isLoopNoise = false;
-	private noisePeriod = 0;
-
-	private shiftReg = 1;
-	private randomMode = false;
 
 	private timer = 0;
 	private timerMax = 0;
+	private volume = 0;
 	private noiseTable = this.NoiseWaveLengthLookup_NTSC;
+	/**随机数类型 (0=32767 bits, 1=93 bits) */
+	private randomMode = 1;
+	private shiftReg = 1;
+	private readonly c2A03: C2A03;
 
+	constructor(c2A03: C2A03) {
+		this.c2A03 = c2A03;
+	}
 
-	Clock() {
+	Reset() {
+		this.shiftReg = 1;
+	}
+
+	ClockRate() {
 		if (!this.enable)
 			return;
 
@@ -34,43 +49,71 @@ export class Noise {
 			this.timer = this.timerMax;
 			this.Step();
 		} else {
-
+			this.timer--;
 		}
 	}
 
-	public WriteIO(address: number, value: number) {
+	WriteIO(address: number, value: number) {
 		address &= 3;
 		switch (address) {
-			case 0:
-				this.isLengthCounterHalt = !!(value & 0x20);
-				this.isConstantVolume = !!(value & 0x10);
-				this.envelopeValue = value & 0x0F;
-
-				this.envelopeVolume = 15;
-				this.envelopeCounter = 0;
+			case 0:		// 0x400C
+				this.envelope.decayRate = value & 0x0F;
+				this.envelope.enable = (value & 0x10) === 0;
+				this.envelope.loop = (value & 0x20) === 0;
+				this.envelope.volume = value & 0xF;
+				this.envelope.decayRate = this.envelope.volume + 1;
+				this.volume = value & 0xF;
 				break;
-			case 2:
-				this.isLoopNoise = !!(value & 0x80);
-				this.noisePeriod = this.noiseTable[value & 0x0F];
+			case 2:		// 0x400E
+				this.randomMode = (value & 8) === 0 ? 1 : 7;
+				this.timerMax = this.noiseTable[value & 0x0F];
 				this.timer = 0;
 				break;
 			case 3:
-				this.lengthCounter = LengthTable[value >> 3];
+				this.lengthCounter = FrameCountLength[value >> 3];
 				break;
 		}
 	}
 
+	/**处理包络 */
+	ProcessEnvelope() {
+		if (!this.envelope.enable)
+			return;
+
+		if (--this.envelope.decayCounter <= 0) {
+			if (this.envelope.volume === 0) {
+				if (this.envelope.loop)
+					this.envelope.volume = 0xF;
+			} else {
+				this.envelope.volume--;
+			}
+			this.envelope.decayCounter = this.envelope.decayRate;
+		}
+	}
+
+	/**处理长度计数器 */
+	ProcessLengthCounter(): void {
+		if (this.envelope.loop && this.lengthCounter > 0) {
+			this.lengthCounter--;
+		}
+	}
+
+
 	private Step(): void {
 		if (!this.enable || this.lengthCounter === 0) {
-			this.volume = 0;
+			this.outValue = 0;
+			return;
 		}
 
-		const temp = ((this.shiftReg << (this.randomMode ? 1 : 3)) ^ this.shiftReg) & 0x4000;
-		if (temp != 0) {
-			this.shiftReg |= 0x01;
-			this.volume = 0;
+		const temp = ((this.shiftReg >>> this.randomMode) ^ this.shiftReg) & 0x1;
+		this.shiftReg >>>= 1;
+		if (temp !== 0) {
+			this.shiftReg |= 0x4000;
+			this.outValue = 0;
 		} else {
-			this.volume = 1 * this.envelopeVolume;
+			this.outValue = this.volume;
 		}
+
+		this.c2A03.UpdateAmp(this.outValue, ChannelName.Noise);
 	}
 }
