@@ -13,9 +13,6 @@ export class Pulse {
 	enable = false;
 	outValue = 0;
 
-	private lastAmp = 0;
-
-	private volume = 0;
 	private duty = 0;
 	private timer = 0;
 	private timerMax = 0;
@@ -29,6 +26,7 @@ export class Pulse {
 		/**恒定音量 (true): 使用包络的音量 (false): 使用恒定音量 */
 		enable: false,
 		/**
+		 * 当恒定音量(false)时，此为true时，length counter将被锁定
 		 * 是否循环
 		 * false: Disable Looping, stay at 0 on end of decay [ \_____ ]
 		 * true: Enable Looping, restart decay at F          [ \\\\\\ ]
@@ -41,6 +39,7 @@ export class Pulse {
 		decayCounter: 0,
 		/**包络音量 */
 		volume: 0,
+		value: 0,
 	};
 
 	/**变音器 */
@@ -79,11 +78,12 @@ export class Pulse {
 		switch (address) {
 			case 0:
 				this.duty = value >> 6;
+				this.envelope.loop = (value & 0x20) !== 0;
 				this.envelope.enable = (value & 0x10) === 0;
-				this.envelope.loop = (value & 0x20) === 0;
-				this.envelope.volume = value & 0xF;
-				this.envelope.decayRate = this.envelope.volume + 1;
-				this.volume = value & 0xF;
+				this.envelope.volume = 0xF;
+				this.envelope.value = value & 0xF;
+				this.envelope.decayRate = this.envelope.value + 1;
+				this.envelope.decayCounter = this.envelope.decayRate;
 				break;
 			case 1:
 				this.sweep.enable = (value & 0x80) !== 0;
@@ -108,7 +108,7 @@ export class Pulse {
 		if (!this.envelope.enable)
 			return;
 
-		if (--this.envelope.decayCounter <= 0) {
+		if (this.envelope.decayCounter <= 0) {
 			if (this.envelope.volume === 0) {
 				if (this.envelope.loop)
 					this.envelope.volume = 0xF;
@@ -116,12 +116,14 @@ export class Pulse {
 				this.envelope.volume--;
 			}
 			this.envelope.decayCounter = this.envelope.decayRate;
+		} else {
+			this.envelope.decayCounter--;
 		}
 	}
 
 	/**处理长度计数器 */
 	ProcessLengthCounter(): void {
-		if (this.envelope.loop && this.lengthCounter > 0) {
+		if (!this.envelope.loop && this.lengthCounter > 0) {
 			this.lengthCounter--;
 		}
 	}
@@ -158,10 +160,10 @@ export class Pulse {
 
 	private Step() {
 		// if (!this.enable || this.lengthCounter === 0 || this.timer < 8 || this.timer > 0x7FF) {
-		if (!this.enable || this.lengthCounter === 0 || this.timer < 8 || DutyTable[this.duty][this.counter] === 0) {
+		if (this.lengthCounter === 0 || this.timer < 8 || DutyTable[this.duty][this.counter] === 0) {
 			this.outValue = 0;
 		} else {
-			this.outValue = this.envelope.enable ? this.envelope.volume : this.volume;
+			this.outValue = this.envelope.enable ? this.envelope.volume : this.envelope.value;
 		}
 		this.counter++;
 		this.counter &= 0x7;

@@ -2,7 +2,7 @@ import { NesColorRGB } from "../NESConst";
 
 const Width = 256;
 const Height = 240;
-const Scale = 3;
+const Scale = 1;
 
 export class Screen {
 

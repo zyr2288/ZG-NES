@@ -1,4 +1,5 @@
 import { Bus } from "../../Bus";
+import { CPU_NTSC } from "../../NESConst";
 import { BlipBuf } from "../BlipBuf";
 import { PulseTable, TndTable } from "./2A03Const";
 import { DPCM } from "./DPCM";
@@ -6,19 +7,22 @@ import { Noise } from "./Noise";
 import { Pulse } from "./Pulse";
 import { Triangle } from "./Triangle";
 
-const NTSCStep = [3728.5, 7456.5, 11185.5, 14914.5];
-const PALStep = [4156.5, 8313.5, 12469.5, 16626.5, 20782.5];
+const NTSC_Step = [3728.5, 7456.5, 11185.5, 14914.5, 18640.5];
+const PAL_Step = [4156.5, 8313.5, 12469.5, 16626.5, 20782.5];
 
-// const Zoom = [0.00752, 752, 0.00851, 0.00494, 0.00335];
+// const Zoom = [0.00752, 0.00752, 0.00851, 0.00494, 0.00335];
 const Zoom = [752, 752, 851, 494, 335];
 // for (let i = 0; i < Zoom.length; i++)
 // 	Zoom[i] *= 20000;
+
+const FrameCounter = CPU_NTSC / 240;
 
 export enum ChannelName { Pulse1, Pulse2, Triangle, Noise, DPCM }
 export class C2A03 {
 
 	irqEnable = true;
 	interruptFlag = false;
+	frameEnd = false;
 
 	private clock = 0;
 	private frameCounter = 0;
@@ -42,11 +46,25 @@ export class C2A03 {
 		this.triangle = new Triangle(this);
 		this.noise = new Noise(this);
 		this.dpcm = new DPCM(bus, this);
-		this.stepLookupTable = NTSCStep.map(value => value * 2);
+		this.stepLookupTable = NTSC_Step.map(value => value * 2);
 	}
 
 	Reset() {
-		this.stepLookupTable = NTSCStep.map(value => value * 2);
+		this.stepLookupTable = NTSC_Step.map(value => value * 2);
+	}
+
+	Clock() {
+		this.clock++;
+		if (this.clock & 0x01) {
+			this.pulse1.ClockRate();
+			this.pulse2.ClockRate();
+			this.noise.ClockRate();
+		}
+		this.triangle.ClockRate();
+		this.dpcm.ClockRate();
+
+		this.ProcessFrameCounter();
+
 	}
 
 	WriteIO(address: number, value: number) {
@@ -97,19 +115,6 @@ export class C2A03 {
 		}
 	}
 
-	Clock() {
-		this.clock++;
-		if (this.clock & 0x01) {
-			this.pulse1.ClockRate();
-			this.pulse2.ClockRate();
-		}
-		this.triangle.ClockRate();
-		this.noise.ClockRate();
-		this.dpcm.ClockRate();
-
-		this.ProcessFrameCounter();
-	}
-
 	// GetOutput() {
 	// 	let value = PulseTable[this.pulse1.outValue + this.pulse2.outValue];
 	// 	value += TndTable[3 * this.triangle.outValue + 2 * this.noise.outValue + this.dpcm.outValue];
@@ -124,7 +129,7 @@ export class C2A03 {
 	// }
 
 	ResetDPCMAmp(value: number) {
-		this.lastAmps[ChannelName.DPCM] = value >>> 1;
+		this.lastAmps[ChannelName.DPCM] = value;
 	}
 
 	EndFrame() {
@@ -174,17 +179,18 @@ export class C2A03 {
 					this.ProcessEnvelopeAndLinearCounter();
 					break;
 				case 2:
+					this.ProcessLengthCounterAndSweep();
 					this.ProcessEnvelopeAndLinearCounter();
 					break;
 				case 3:
 					break;
 				case 4:
+					this.ProcessLengthCounterAndSweep();
 					this.ProcessEnvelopeAndLinearCounter();
 					end = true;
 					break;
 			}
 		}
-
 		this.frameCounter++;
 		if (end) {
 			this.clock = 0;
@@ -196,6 +202,7 @@ export class C2A03 {
 		this.pulse1.ProcessEnvelope();
 		this.pulse2.ProcessEnvelope();
 		this.triangle.DoLinerClock();
+		this.noise.ProcessEnvelope();
 	}
 
 	private ProcessLengthCounterAndSweep(): void {
@@ -206,6 +213,8 @@ export class C2A03 {
 		this.pulse2.ProcessSweep();
 
 		this.triangle.DoFrameClock();
+
+		this.noise.ProcessLengthCounter();
 	}
 
 	private TriggerIRQ(): void {

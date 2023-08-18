@@ -1,4 +1,5 @@
 import { Bus } from "../Bus";
+import { BitValue } from "../NESConst";
 import { AddressingMode, Instruction, OperationTable } from "./OperationTable";
 
 interface AddressData {
@@ -287,9 +288,9 @@ export class CPU {
 	private SetFlag(flag: Flags, value: boolean): void {
 		this.flags[flag] = value;
 		if (value) {
-			this.registers.p |= flag;
+			this.registers.p |= BitValue[flag];
 		} else {
-			this.registers.p &= ~flag;
+			this.registers.p &= ~BitValue[flag];
 		}
 	}
 
@@ -350,10 +351,10 @@ export class CPU {
 	private Relative() {
 		// Range is -128 ~ 127
 		this.addrData.temp = this.bus.ReadByte(this.registers.pc++);
-		if (this.addrData.temp & 0x80)
+		if ((this.addrData.temp & 0x80) !== 0)
 			this.addrData.temp -= 0x100;
 
-		this.addrData.address = (this.registers.pc + this.addrData.temp) & 0xFFFFF;
+		this.addrData.address = (this.registers.pc + this.addrData.temp) & 0xFFFF;
 	}
 
 	private XIndexedIndirect() {

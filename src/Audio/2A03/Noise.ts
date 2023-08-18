@@ -20,14 +20,15 @@ export class Noise {
 		decayCounter: 0,
 		/**包络音量 */
 		volume: 0,
+		/**音量值 */
+		value: 0,
 	};
 
 	public lengthCounter = 0;
 
 	private timer = 0;
 	private timerMax = 0;
-	private volume = 0;
-	private noiseTable = this.NoiseWaveLengthLookup_NTSC;
+	private noiseTable = this.NoiseWaveLengthLookup_NTSC.map(value => value >> 1);
 	/**随机数类型 (0=32767 bits, 1=93 bits) */
 	private randomMode = 1;
 	private shiftReg = 1;
@@ -57,12 +58,12 @@ export class Noise {
 		address &= 3;
 		switch (address) {
 			case 0:		// 0x400C
-				this.envelope.decayRate = value & 0x0F;
+				this.envelope.loop = (value & 0x20) !== 0;
 				this.envelope.enable = (value & 0x10) === 0;
-				this.envelope.loop = (value & 0x20) === 0;
-				this.envelope.volume = value & 0xF;
-				this.envelope.decayRate = this.envelope.volume + 1;
-				this.volume = value & 0xF;
+				this.envelope.volume = 0xF;
+				this.envelope.value = value & 0xF;
+				this.envelope.decayRate = this.envelope.value + 1;
+				this.envelope.decayCounter = 0;
 				break;
 			case 2:		// 0x400E
 				this.randomMode = (value & 8) === 0 ? 1 : 7;
@@ -80,7 +81,7 @@ export class Noise {
 		if (!this.envelope.enable)
 			return;
 
-		if (--this.envelope.decayCounter <= 0) {
+		if (this.envelope.decayCounter === 0) {
 			if (this.envelope.volume === 0) {
 				if (this.envelope.loop)
 					this.envelope.volume = 0xF;
@@ -88,32 +89,32 @@ export class Noise {
 				this.envelope.volume--;
 			}
 			this.envelope.decayCounter = this.envelope.decayRate;
+		} else {
+			this.envelope.decayCounter--
 		}
+
 	}
 
 	/**处理长度计数器 */
 	ProcessLengthCounter(): void {
-		if (this.envelope.loop && this.lengthCounter > 0) {
+		if (!this.envelope.loop && this.lengthCounter > 0) {
 			this.lengthCounter--;
 		}
 	}
 
 
 	private Step(): void {
-		if (!this.enable || this.lengthCounter === 0) {
-			this.outValue = 0;
+		if (this.lengthCounter === 0)
 			return;
-		}
 
-		const temp = ((this.shiftReg >>> this.randomMode) ^ this.shiftReg) & 0x1;
-		this.shiftReg >>>= 1;
+		const temp = ((this.shiftReg >> this.randomMode) ^ this.shiftReg) & 0x1;
+		this.shiftReg >>= 1;
 		if (temp !== 0) {
 			this.shiftReg |= 0x4000;
 			this.outValue = 0;
 		} else {
-			this.outValue = this.volume;
+			this.outValue = this.envelope.enable ? this.envelope.volume : this.envelope.value;
 		}
-
 		this.c2A03.UpdateAmp(this.outValue, ChannelName.Noise);
 	}
 }

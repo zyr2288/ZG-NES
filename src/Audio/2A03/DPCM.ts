@@ -32,10 +32,12 @@ export class DPCM {
 		this.bus = bus;
 	}
 
-	set enable(value:boolean) {
+	set enable(value: boolean) {
 		this._enable = value;
-		if (value)
+		if (value){
 			this.dataBit = 0;
+			this.c2A03.ResetDPCMAmp(0x3F);
+		}
 	}
 
 	WriteIO(address: number, value: number) {
@@ -44,11 +46,11 @@ export class DPCM {
 			case 0:		// 0x4010
 				this.irqEnable = (value & 0x80) !== 0;
 				this.loop = (value & 0x40) !== 0;
-				this.timerMax = this.lookupTable[value & 0xF];
+				this.timerMax = this.lookupTable[value & 0xF] >> 1;
 				break;
 			case 1:
 				this.deltaData = value & 0x7F;
-				this.c2A03.ResetDPCMAmp(0x80 >> 1);
+				this.c2A03.ResetDPCMAmp(0x3F);
 				break;
 			case 2:
 				this.sampleAddress = (value << 6) + 0xC000;
@@ -75,7 +77,7 @@ export class DPCM {
 				this.deltaData = 0x7F;
 
 			this.c2A03.UpdateAmp(this.deltaData, ChannelName.DPCM);
-			this.currectData >>>= 1;
+			this.currectData >>= 1;
 			this.timer += this.timerMax;
 			this.ReadData();
 		} else {
