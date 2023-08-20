@@ -23,7 +23,6 @@ export class APU {
 	private sampleRate: number;
 	private sampleLength: number;
 
-	private temp = 0;
 
 	constructor(bus: Bus, option?: NESOption) {
 		this.bus = bus;
@@ -46,7 +45,6 @@ export class APU {
 
 	Clock() {
 		this.clock++;
-
 		this.c2A03.Clock();
 
 		// let value = this.c2A03.Render();
@@ -62,10 +60,7 @@ export class APU {
 	}
 
 	WriteIO(address: number, value: number) {
-		if (address >= 0x4000 && address <= 0x4017) {
-			this.c2A03.WriteIO(address, value);
-			return;
-		}
+		this.c2A03.WriteIO(address, value);
 	}
 
 	ReadBuffer() {
@@ -78,11 +73,11 @@ export class APU {
 
 	}
 
-	private EndFrame() {
-		this.blipBuf.BlipEndFrame(this.clock);
+	EndFrame() {
+		this.blipBuf.BlipEndFrame(this.bus.apu.clock);
 		this.ReadBuffer();
 		this.c2A03.EndFrame();
 		this.bus.api.OnAudio?.(this.out);
-		this.clock = 0;
+		this.bus.apu.clock = 0;
 	}
 }

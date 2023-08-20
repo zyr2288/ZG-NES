@@ -147,6 +147,10 @@ export class CPU {
 		this.addrData.address = -1;
 		this.addrData.data = -1;
 
+		if (this.bus.endFrame) {
+			this.clock = 0;
+		}
+
 		return true;
 	}
 	//#endregion 单步

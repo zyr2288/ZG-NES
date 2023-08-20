@@ -44,17 +44,25 @@ export class Bus {
 	}
 
 	StartFrame() { this.endFrame = false; }
-	EndFrame() { this.endFrame = true; }
+	EndFrame() {
+		this.endFrame = true;
+		// this.apu.EndFrame();
+	}
 
-	ReadByte(address: number) {
+	ReadByte(address: number): number {
 		if (address < 0x2000)
 			return this.cpu.ram[address & 0x7FF];
 
 		if (address >= 0x2000 && address <= 0x2007)
 			return this.ppu.ReadIO(address);
 
-		if (address === 0x4016 || address === 0x4017)
-			return this.controller.ReadIO(address);
+		switch (address) {
+			case 0x4015:
+				return 0;
+			case 0x4016:
+			case 0x4017:
+				return this.controller.ReadIO(address);
+		}
 
 		if (address < 0x8000)
 			return this.cartridge.useSRAM ? 0 : this.cpu.sram[address & 0x1FFF];
@@ -79,7 +87,7 @@ export class Bus {
 			return;
 		}
 
-		if (address >= 0x4000 && address <= 0x4015) {
+		if (address >= 0x4000 && address <= 0x4015 || address === 0x4017) {
 			this.apu.WriteIO(address, value);
 			return;
 		}

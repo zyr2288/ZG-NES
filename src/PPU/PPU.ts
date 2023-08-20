@@ -525,7 +525,8 @@ export class PPU {
 		} else {
 			address &= 0x1F;
 			if ((address & 3) === 0)
-				this.paletteTable[0x00] = value;
+				this.paletteTable[0x00] = this.paletteTable[0x04] = this.paletteTable[0x08] = this.paletteTable[0x0C] =
+					this.paletteTable[0x10] = this.paletteTable[0x14] = this.paletteTable[0x18] = this.paletteTable[0x1C] = value;
 			else
 				this.paletteTable[address] = value;
 		}

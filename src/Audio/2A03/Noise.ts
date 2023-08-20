@@ -1,10 +1,11 @@
+import { Bus } from "../../Bus";
 import { FrameCountLength } from "./2A03Const";
 import { C2A03, ChannelName } from "./C2A03";
 
-export class Noise {
+const NoiseWaveLengthLookup_NTSC = [4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068];
+const NoiseWaveLengthLookup_PAL = [4, 8, 14, 30, 60, 88, 118, 148, 188, 236, 354, 472, 708, 944, 1890, 3778];
 
-	private readonly NoiseWaveLengthLookup_NTSC = [4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068];
-	private readonly NoiseWaveLengthLookup_PAL = [4, 8, 14, 30, 60, 88, 118, 148, 188, 236, 354, 472, 708, 944, 1890, 3778];
+export class Noise {
 
 	enable = false;
 	outValue = 0; // 4bit
@@ -28,11 +29,13 @@ export class Noise {
 
 	private timer = 0;
 	private timerMax = 0;
-	private noiseTable = this.NoiseWaveLengthLookup_NTSC.map(value => value >> 1);
+	private noiseTable = NoiseWaveLengthLookup_NTSC.map(value => value >> 1);
 	/**随机数类型 (0=32767 bits, 1=93 bits) */
 	private randomMode = 1;
 	private shiftReg = 1;
 	private readonly c2A03: C2A03;
+
+	testValue = 0;
 
 	constructor(c2A03: C2A03) {
 		this.c2A03 = c2A03;
@@ -62,8 +65,9 @@ export class Noise {
 				this.envelope.enable = (value & 0x10) === 0;
 				this.envelope.volume = 0xF;
 				this.envelope.value = value & 0xF;
-				this.envelope.decayRate = this.envelope.value + 1;
+				this.envelope.decayRate = this.envelope.value;
 				this.envelope.decayCounter = 0;
+				this.testValue = value;
 				break;
 			case 2:		// 0x400E
 				this.randomMode = (value & 8) === 0 ? 1 : 7;
@@ -81,7 +85,7 @@ export class Noise {
 		if (!this.envelope.enable)
 			return;
 
-		if (this.envelope.decayCounter === 0) {
+		if (this.envelope.decayCounter <= 0) {
 			if (this.envelope.volume === 0) {
 				if (this.envelope.loop)
 					this.envelope.volume = 0xF;
@@ -90,7 +94,7 @@ export class Noise {
 			}
 			this.envelope.decayCounter = this.envelope.decayRate;
 		} else {
-			this.envelope.decayCounter--
+			this.envelope.decayCounter--;
 		}
 
 	}

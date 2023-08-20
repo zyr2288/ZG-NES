@@ -82,8 +82,8 @@ export class Pulse {
 				this.envelope.enable = (value & 0x10) === 0;
 				this.envelope.volume = 0xF;
 				this.envelope.value = value & 0xF;
-				this.envelope.decayRate = this.envelope.value + 1;
-				this.envelope.decayCounter = this.envelope.decayRate;
+				this.envelope.decayRate = this.envelope.value;
+				this.envelope.decayCounter = 0;
 				break;
 			case 1:
 				this.sweep.enable = (value & 0x80) !== 0;

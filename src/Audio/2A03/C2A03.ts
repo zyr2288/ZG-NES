@@ -15,8 +15,6 @@ const Zoom = [752, 752, 851, 494, 335];
 // for (let i = 0; i < Zoom.length; i++)
 // 	Zoom[i] *= 20000;
 
-const FrameCounter = CPU_NTSC / 240;
-
 export enum ChannelName { Pulse1, Pulse2, Triangle, Noise, DPCM }
 export class C2A03 {
 
@@ -32,10 +30,10 @@ export class C2A03 {
 	private pulse1: Pulse;
 	private pulse2: Pulse;
 	private triangle: Triangle;
-	private noise: Noise;
+	noise: Noise;
 	private dpcm: DPCM;
 
-	private bus: Bus;
+	bus: Bus;
 
 	private lastAmps: number[] = [];
 
@@ -64,7 +62,6 @@ export class C2A03 {
 		this.dpcm.ClockRate();
 
 		this.ProcessFrameCounter();
-
 	}
 
 	WriteIO(address: number, value: number) {
@@ -112,6 +109,12 @@ export class C2A03 {
 				this.fourStepMode = (value & 0x80) === 0 ? 4 : 5;
 				this.irqEnable = (value & 0x40) !== 0;
 				break;
+		}
+	}
+
+	ReadIO(address: number) {
+		if (address === 0x4015) {
+			this.interruptFlag = false;
 		}
 	}
 
@@ -176,6 +179,7 @@ export class C2A03 {
 					this.ProcessEnvelopeAndLinearCounter();
 					break;
 				case 1:
+					this.ProcessLengthCounterAndSweep();
 					this.ProcessEnvelopeAndLinearCounter();
 					break;
 				case 2:
@@ -193,7 +197,7 @@ export class C2A03 {
 		}
 		this.frameCounter++;
 		if (end) {
-			this.clock = 0;
+			this.clock = -2;
 			this.frameCounter = 0;
 		}
 	}
