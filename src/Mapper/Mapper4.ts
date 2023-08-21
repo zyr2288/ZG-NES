@@ -12,16 +12,16 @@ export class Mapper4 implements IMapper {
 	private bankDataRegister = 0;
 	/**
 	 * |CHR map mode →|$8000.D7 = 0|$8000.D7 = 1|
-	 * |---|---|---|
+	 * |:---:|:---:|:---:|
 	 * |PPU Bank|Value of MMC3 register|
 	 * |$0000-$03FF|R0|R2|
-	 * |$0400-$07FF|  |R3|
+	 * |$0400-$07FF|R0|R3|
 	 * |$0800-$0BFF|R1|R4|
-	 * |$0C00-$0FFF|  |R5|
+	 * |$0C00-$0FFF|R1|R5|
 	 * |$1000-$13FF|R2|R0|
-	 * |$1400-$17FF|R3|  |
+	 * |$1400-$17FF|R3|R0|
 	 * |$1800-$1BFF|R4|R1|
-	 * |$1C00-$1FFF|R5|  |
+	 * |$1C00-$1FFF|R5|R1|
 	 */
 	private chrInversion = false;
 	private bankMode = false;
@@ -98,28 +98,24 @@ export class Mapper4 implements IMapper {
 	}
 
 	private SwitchBank(value: number) {
+		let index = 0;
+		let more = false;
 		switch (this.bankDataRegister) {
 			case 0:
-				if(this.chrInversion) {
-					this.bus.cartridge.chrIndex[0] = value;
-					this.bus.cartridge.chrIndex[1] = value + 1;
-				}else {
-
-				}
+				more = true;
 				break;
 			case 1:
-				if (this.chrInversion) {
-					this.bus.cartridge.chrIndex[2] = value;
-					this.bus.cartridge.chrIndex[3] = value + 1;
-				}else {
-
-				}
+				index = 2;
+				more = true;
 				break;
 			case 2:
+				index = 4;
 				break;
 			case 3:
+				index = 5;
 				break;
 			case 4:
+				index = 6;
 				break;
 			case 5:
 				break;
@@ -127,6 +123,14 @@ export class Mapper4 implements IMapper {
 				break;
 			case 7:
 				break;
+		}
+
+		if (this.chrInversion) {
+			this.bus.cartridge.chrIndex[index + 4] = value;
+			if (more) this.bus.cartridge.chrIndex[index + 5] = value + 1;
+		} else {
+			this.bus.cartridge.chrIndex[index] = value;
+			if (more) this.bus.cartridge.chrIndex[index + 5] = value + 1;
 		}
 	}
 }
