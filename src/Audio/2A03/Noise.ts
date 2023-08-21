@@ -85,7 +85,7 @@ export class Noise {
 		if (!this.envelope.enable)
 			return;
 
-		if (this.envelope.decayCounter <= 0) {
+		if (--this.envelope.decayCounter < 0) {
 			if (this.envelope.volume === 0) {
 				if (this.envelope.loop)
 					this.envelope.volume = 0xF;
@@ -93,8 +93,6 @@ export class Noise {
 				this.envelope.volume--;
 			}
 			this.envelope.decayCounter = this.envelope.decayRate;
-		} else {
-			this.envelope.decayCounter--;
 		}
 
 	}

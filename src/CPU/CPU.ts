@@ -105,7 +105,7 @@ export class CPU {
 		this.clock++;
 		if (--this.cycle > 0)
 			return false;
-		
+
 		// this.debug.lastPC = this.registers.pc;
 		// if (this.registers.pc === 0xC8EE)
 		// 	debugger;
@@ -282,7 +282,7 @@ export class CPU {
 
 	private SetNZFlag(data: number) {
 		this.SetFlag(Flags.FlagZ, (data & 0xFF) === 0);
-		this.SetFlag(Flags.FlagN, !!(data & 0x80));
+		this.SetFlag(Flags.FlagN, (data & 0x80) !== 0);
 	}
 
 	private GetData() {
@@ -402,8 +402,8 @@ export class CPU {
 	private ASL(): void {
 		let data = this.GetData() << 1;
 
-		this.SetFlag(Flags.FlagC, !!(data & 0x100));
-		data = data & 0xFF;
+		this.SetFlag(Flags.FlagC, (data & 0x100) !== 0);
+		data &= 0xFF;
 		this.SetNZFlag(data);
 
 		if (this.addrData.address < 0) {
@@ -449,9 +449,9 @@ export class CPU {
 	private BIT(): void {
 		this.addrData.temp = this.GetData();
 
-		this.SetFlag(Flags.FlagZ, !(this.registers.a & this.addrData.temp));
-		this.SetFlag(Flags.FlagN, !!(this.addrData.temp & (1 << 7)));
-		this.SetFlag(Flags.FlagV, !!(this.addrData.temp & (1 << 6)));
+		this.SetFlag(Flags.FlagZ, (this.registers.a & this.addrData.temp) === 0);
+		this.SetFlag(Flags.FlagN, (this.addrData.temp & 0x80) !== 0);
+		this.SetFlag(Flags.FlagV, (this.addrData.temp & 0x40) !== 0);
 	}
 
 	private BMI(): void {

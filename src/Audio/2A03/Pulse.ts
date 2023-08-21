@@ -108,7 +108,7 @@ export class Pulse {
 		if (!this.envelope.enable)
 			return;
 
-		if (this.envelope.decayCounter <= 0) {
+		if (--this.envelope.decayCounter < 0) {
 			if (this.envelope.volume === 0) {
 				if (this.envelope.loop)
 					this.envelope.volume = 0xF;
@@ -116,8 +116,6 @@ export class Pulse {
 				this.envelope.volume--;
 			}
 			this.envelope.decayCounter = this.envelope.decayRate;
-		} else {
-			this.envelope.decayCounter--;
 		}
 	}
 
@@ -134,7 +132,7 @@ export class Pulse {
 			return;
 		}
 
-		if (this.sweep.counter === 0) {
+		if (--this.sweep.counter < 0) {
 			this.sweep.counter = this.sweep.counterMax;
 			// 1. A barrel shifter shifts the channel's 11-bit raw timer period right by the shift count, producing the change amount.
 			// 2. If the negate flag is true, the change amount is made negative.
@@ -153,8 +151,6 @@ export class Pulse {
 				this.timerMax--;
 			}
 
-		} else {
-			this.sweep.counter--;
 		}
 	}
 
