@@ -25,7 +25,8 @@ export class NES {
 		new Controller(this.bus);
 		new API(this.bus, option);
 
-		// new DebugUtils(this.bus);
+		if (option)
+			new DebugUtils(this.bus, option);
 
 		this.inputAPI = new InputAPI(this.bus);
 	}
@@ -55,17 +56,16 @@ export class NES {
 		this.Reset();
 	}
 
-	/**更新调色板信息 */
-	SetDebug(option: NESOption) {
-		this.bus.debug?.SetPatternCanvas(option);
-		this.bus.debug?.SetDisassemblerDiv(option);
-	}
-
 	OutputAudio(out: Float32Array) {
 		this.bus.apu.blipBuf.ReadSample(out.length, false);
 		for (let i = 0; i < out.length; i++)
 			out[i] = this.bus.apu.blipBuf.outBuffer[i] / 32768;
-		
+
 		return out.length - this.bus.apu.blipBuf.BufAvail;
+	}
+
+	UpdateDebug() {
+		this.bus.debug?.patternTable?.Update();
+		this.bus.debug?.diassembler?.Update();
 	}
 }

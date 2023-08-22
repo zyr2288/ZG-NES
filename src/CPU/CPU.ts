@@ -165,6 +165,20 @@ export class CPU {
 
 		this.cycle += 7;
 	}
+
+	IRQ() {
+		if (this.IsFlagSet(Flags.FlagI))
+			return;
+
+		this.PushWord(this.registers.pc);
+		this.PushByte((this.registers.p | Flags.FlagU) & ~Flags.FlagB);
+
+		this.SetFlag(Flags.FlagI, true);
+
+		this.registers.pc = this.bus.ReadWord(IRQ);
+
+		this.cycle += 7;
+	}
 	//#endregion NMI/IRQ
 
 	/***** private *****/

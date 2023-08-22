@@ -10,17 +10,12 @@ export class DebugUtils {
 
 	private readonly bus: Bus;
 
-	constructor(bus: Bus) {
+	constructor(bus: Bus, option: NESOption) {
 		this.bus = bus;
 		this.bus.debug = this;
-	}
+		if (option.pattern)
+			this.patternTable = new PatternTable(this.bus, option);
 
-	/**设定贴图表的Canvas */
-	SetPatternCanvas(option: NESOption) {
-		this.patternTable = new PatternTable(this.bus, option);
-	}
-
-	SetDisassemblerDiv(option: NESOption) {
 		this.diassembler = new Disassembler(this.bus, option);
 	}
 }

@@ -68,6 +68,7 @@ let disasm = GetHTMLElementById("disasm", "div");
 let register = GetHTMLElementById("register", "div");
 let flagDiv = GetHTMLElementById("flagDiv", "div");
 let info = GetHTMLElementById("info", "div");
+let frameThread = 0;
 
 let option = {
 	start: false,
@@ -80,6 +81,7 @@ let nesAudio = new Audio();
 let nes = new NES({
 	sampleRate: nesAudio.sampleRate,
 	sampleLength: nesAudio.sampleLength,
+	pattern,
 	OnFrame: (data) => {
 		nesScreen.SetPixels(data);
 	},
@@ -94,7 +96,8 @@ BindingButtonAction("btn-openFile", async (ev) => {
 });
 
 BindingButtonAction("btn-test", (ev) => {
-	nesAudio.Start();
+	cancelAnimationFrame(frameThread);
+	nes.UpdateDebug();
 });
 
 BindingButtonAction("btn-step", (ev) => {
@@ -111,13 +114,14 @@ BindingButtonAction("btn-oneFrame", (ev) => {
 
 
 BindingButtonAction("btn-run", (ev) => {
+	nesAudio.Start();
 	const fps = 60;
 	let now;
 	let then = Date.now();
 	const interval = 1000 / fps;
 	let delta;
-	window.requestAnimationFrame(function Frame() {
-		window.requestAnimationFrame(Frame);
+	frameThread = window.requestAnimationFrame(function Frame() {
+		frameThread = window.requestAnimationFrame(Frame);
 		now = Date.now();
 		delta = now - then;
 		if (delta > interval) {

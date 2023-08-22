@@ -39,7 +39,7 @@ export class Mapper4 implements IMapper {
 	private irq = {
 		enable: false,
 		latchValue: 0,
-		nowValue: 0,
+		counter: 0,
 	}
 
 	constructor(bus: Bus) {
@@ -80,7 +80,7 @@ export class Mapper4 implements IMapper {
 				this.irq.latchValue = value;
 				break;
 			case 0xC001:
-				this.irq.nowValue = value;
+				this.irq.counter = value;
 				break;
 			case 0xE000:
 				this.irq.enable = false;
@@ -97,15 +97,26 @@ export class Mapper4 implements IMapper {
 	}
 
 	GetCHRTile(tileIndex: number): Tile {
-		const index = (tileIndex >> 10);
-		const tile = (tileIndex >> 4) & 0x3F;
-		return this.bus.cartridge.chrBanks[index][tile];
+		const index = this.bus.cartridge.chrIndex[tileIndex >> 6];
+		tileIndex &= 0x3F;
+		return this.bus.cartridge.chrBanks[index][tileIndex];
 	}
 
 	WriteCHR(address: number, value: number): void { }
 
 	PPUClockEvent?(scanLine: number, ppuCycle: number): void {
-		// throw new Error("Method not implemented.");
+		if (ppuCycle !== 260 || (scanLine > 239 && scanLine < 261)) {
+			return;
+		}
+
+		if (this.irq.counter === 0) {
+			this.irq.counter = this.irq.latchValue;
+		} else {
+			this.irq.counter--;
+			if (this.irq.counter === 0 && this.irq.enable) {
+				this.bus.cpu.IRQ();
+			}
+		}
 	}
 
 	private SwitchBank(value: number) {
