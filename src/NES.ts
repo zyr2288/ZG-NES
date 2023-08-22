@@ -1,7 +1,7 @@
 import { APU } from "./Audio/APU";
 import { Bus } from "./Bus";
 import { CPU } from "./CPU/CPU";
-import { Cartridge } from "./CPU/Cartridge";
+import { Cartridge } from "./Mapper/Cartridge";
 import { DebugUtils } from "./Debug/DebugUtils";
 import { Controller } from "./Input/Controller";
 import { InputAPI } from "./Input/InputAPI";

@@ -1,7 +1,7 @@
 import { CPU } from "./CPU/CPU";
 import { PPU } from "./PPU/PPU";
 import { APU } from "./Audio/APU";
-import { Cartridge } from "./CPU/Cartridge";
+import { Cartridge } from "./Mapper/Cartridge";
 import { DebugUtils } from "./Debug/DebugUtils";
 import { Controller } from "./Input/Controller";
 import { ClockRate, MachineType } from "./NESConst";

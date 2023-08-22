@@ -1,6 +1,6 @@
 import { Bus } from "../Bus";
 import { Tile } from "../PPU/PPUBlock";
-import { IMapper } from "./IMapper";
+import { IMapper, MapperInitOption } from "./IMapper";
 
 /**一般是 PRGSize - 1 */
 const PrgSizeAND = 0x3FFF;
@@ -17,7 +17,7 @@ export class Mapper2 implements IMapper {
 		this.bus.cartridge.mapper = this;
 	}
 
-	Initialization(option: { maxPrg: number }): void {
+	Initialization(option: MapperInitOption): void {
 		this.bus.cartridge.prgIndex = [0, option.maxPrg];
 		this.bus.cartridge.chrIndex = [-1];
 		this.bus.cartridge.chrRam = true;

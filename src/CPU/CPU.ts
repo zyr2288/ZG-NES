@@ -106,9 +106,9 @@ export class CPU {
 		if (--this.cycle > 0)
 			return false;
 
-		// this.debug.lastPC = this.registers.pc;
-		// if (this.registers.pc === 0xC8EE)
+		// if (this.registers.pc === 32769)
 		// 	debugger;
+		// this.debug.lastPC = this.registers.pc;
 
 		const opcode = this.bus.ReadByte(this.registers.pc++);
 		if (opcode === 0)

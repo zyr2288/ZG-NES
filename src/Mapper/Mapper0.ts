@@ -1,7 +1,7 @@
 import { Bus } from "../Bus";
 import { Tile } from "../PPU/PPUBlock";
 import { Utils } from "../Utils";
-import { IMapper } from "./IMapper";
+import { IMapper, MapperInitOption } from "./IMapper";
 
 const PrgSizeAND = 0x3FFF;
 
@@ -19,7 +19,7 @@ export class Mapper0 implements IMapper {
 	/**
 	 * Mapper0 直接使用一个PRG-ROM进行管理
 	 */
-	Initialization(option: { maxPrg: number }): void {
+	Initialization(option: MapperInitOption): void {
 		let tempBank = new Uint8Array(0x8000);
 		Utils.CopyArray(this.bus.cartridge.prgBanks[0], 0, tempBank, 0);
 		if (option.maxPrg === 0) {
@@ -40,9 +40,10 @@ export class Mapper0 implements IMapper {
 	GetCHRTile(address: number): Tile {
 		return this.bus.cartridge.chrBanks[0][address];
 	}
-	WriteCHR(address: number, value: number): void { }
 
+	WriteCHR(address: number, value: number): void { }
 	WritePRG(address: number, value: number) { }
+
 	ReadPRG(address: number) {
 		address -= 0x8000;
 		return this.bus.cartridge.prgBanks[0][address];

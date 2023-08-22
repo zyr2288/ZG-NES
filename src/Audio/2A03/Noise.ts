@@ -49,11 +49,9 @@ export class Noise {
 		if (!this.enable)
 			return;
 
-		if (this.timer === 0) {
+		if (--this.timer <= 0) {
 			this.timer = this.timerMax;
 			this.Step();
-		} else {
-			this.timer--;
 		}
 	}
 
@@ -66,8 +64,7 @@ export class Noise {
 				this.envelope.volume = 0xF;
 				this.envelope.value = value & 0xF;
 				this.envelope.decayRate = this.envelope.value;
-				this.envelope.decayCounter = 0;
-				this.testValue = value;
+				this.envelope.decayCounter = this.envelope.decayRate;
 				break;
 			case 2:		// 0x400E
 				this.randomMode = (value & 8) === 0 ? 1 : 7;

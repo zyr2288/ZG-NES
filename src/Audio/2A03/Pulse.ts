@@ -65,11 +65,9 @@ export class Pulse {
 		if (!this.enable)
 			return;
 
-		if (this.timer === 0) {
+		if (--this.timer <= 0) {
 			this.timer = this.timerMax;
 			this.Step();
-		} else {
-			this.timer--;
 		}
 	}
 
@@ -83,14 +81,14 @@ export class Pulse {
 				this.envelope.volume = 0xF;
 				this.envelope.value = value & 0xF;
 				this.envelope.decayRate = this.envelope.value;
-				this.envelope.decayCounter = 0;
+				this.envelope.decayCounter = this.envelope.decayRate;
 				break;
 			case 1:
 				this.sweep.enable = (value & 0x80) !== 0;
 				this.sweep.counterMax = (value >> 4) & 7;
 				this.sweep.direction = (value & 0x8) !== 0;
 				this.sweep.shift = value & 7;
-				this.sweep.counter = 0;
+				this.sweep.counter = this.sweep.counterMax;
 				break;
 			case 2:
 				this.timerMax = (this.timerMax & 0xFF00) | value;
@@ -150,7 +148,6 @@ export class Pulse {
 			if (this.channel === 1 && change <= 0) {
 				this.timerMax--;
 			}
-
 		}
 	}
 

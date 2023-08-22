@@ -14,7 +14,7 @@ export class DPCM {
 	private timerMax = 0;
 	private dataBit = 0;
 	private loop = false;
-	private lookupTable = RateIndex_NTSC;
+	private lookupTable = RateIndex_NTSC.map(value => value << 1);
 
 	private nowLength = 0;
 	private nowAddress = 0;
@@ -67,7 +67,7 @@ export class DPCM {
 		if (!this._enable)
 			return;
 
-		if (this.timer === 0) {
+		if (--this.timer <= 0) {
 			this.timer = this.timerMax;
 			const amp = (this.currectData & 1) === 1 ? 2 : -2;
 			this.deltaData += amp;
@@ -78,10 +78,7 @@ export class DPCM {
 
 			this.c2A03.UpdateAmp(this.deltaData, ChannelName.DPCM);
 			this.currectData >>= 1;
-			this.timer += this.timerMax;
 			this.ReadData();
-		} else {
-			this.timer--;
 		}
 	}
 

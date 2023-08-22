@@ -64,14 +64,12 @@ export class Triangle {
 		if (!this.enable || this.lengthCounter === 0 || this.linear.counter === 0)
 			return;
 
-		if (this.timer === 0) {
+		if (--this.timer <= 0) {
 			this.timer = this.timerMax;
 			const value = TriangleVolumeTable[this.stepIndex];
 			this.c2A03.UpdateAmp(value, ChannelName.Triangle);
 			// this.outValue = TriangleVolumeTable[this.stepIndex];
 			this.stepIndex = (this.stepIndex + 1) & 0x1F;
-		} else {
-			this.timer--;
 		}
 	}
 

@@ -1,32 +1,40 @@
 import { Bus } from "../Bus";
 import { Tile } from "../PPU/PPUBlock";
-import { IMapper } from "./IMapper";
+import { IMapper, MapperInitOption } from "./IMapper";
 
 const prgMaxAnd = 0x1FFF;
 
+/**
+ * https://www.nesdev.org/wiki/MMC3
+ * 
+ * 以下表格已针对代码做了修改，原文请参考链接
+ * |CHR map mode →|$8000.D7 = 0|$8000.D7 = 1|
+ * |:---:|:---:|:---:|
+ * |PPU Bank|Value of MMC3 register|
+ * |$0000-$03FF|R0|R4|
+ * |$0400-$07FF|R1|R5|
+ * |$0800-$0BFF|R2|R6|
+ * |$0C00-$0FFF|R3|R7|
+ * |$1000-$13FF|R4|R0|
+ * |$1400-$17FF|R5|R1|
+ * |$1800-$1BFF|R6|R2|
+ * |$1C00-$1FFF|R7|R3|
+ */
 export class Mapper4 implements IMapper {
 	bus: Bus;
 	prgSize: number = prgMaxAnd + 1;
 	chrSize: number = 0x400;
 
 	private bankDataRegister = 0;
-	/**
-	 * |CHR map mode →|$8000.D7 = 0|$8000.D7 = 1|
-	 * |:---:|:---:|:---:|
-	 * |PPU Bank|Value of MMC3 register|
-	 * |$0000-$03FF|R0|R2|
-	 * |$0400-$07FF|R0|R3|
-	 * |$0800-$0BFF|R1|R4|
-	 * |$0C00-$0FFF|R1|R5|
-	 * |$1000-$13FF|R2|R0|
-	 * |$1400-$17FF|R3|R0|
-	 * |$1800-$1BFF|R4|R1|
-	 * |$1C00-$1FFF|R5|R1|
-	 */
+	/**CHR-ROM 交换 */
 	private chrInversion = false;
+	/**PRG-ROM 模式，false为 0xC000-0xDFFF为最后第二Bank，否则是0x8000-0x9FFF */
 	private bankMode = false;
 	private writeProtection = false;
 	private prgRAMEnable = false;
+
+	private maxPrg = 0;
+	private maxChr = 0;
 
 	private irq = {
 		enable: false,
@@ -38,15 +46,17 @@ export class Mapper4 implements IMapper {
 		this.bus = bus;
 	}
 
-	Initialization(option: { maxPrg: number; }): void {
+	Initialization(option: MapperInitOption): void {
 		this.bus.cartridge.prgIndex = [0, 0, option.maxPrg - 1, option.maxPrg];
 		this.bus.cartridge.chrIndex = [0, 0, 0, 0, 0, 0, 0, 0];
+		this.maxPrg = option.maxPrg;
+		this.maxChr = option.maxChr;
 	}
 
 	ReadPRG(address: number): number {
-		let index = (address - 0x8000) >> 13;
-		address &= prgMaxAnd;
-		return this.bus.cartridge.prgBanks[index][address];
+		const index = this.bus.cartridge.prgIndex[(address - 0x8000) >> 13];
+		const add = address & prgMaxAnd;
+		return this.bus.cartridge.prgBanks[index][add];
 	}
 
 	WritePRG(address: number, value: number): void {
@@ -82,55 +92,63 @@ export class Mapper4 implements IMapper {
 	}
 
 	ReadCHR(address: number): number {
-		throw new Error("Method not implemented.");
+		const tile = this.GetCHRTile(address >> 4);
+		return tile.data[address & 0xF];
 	}
 
 	GetCHRTile(tileIndex: number): Tile {
-		throw new Error("Method not implemented.");
+		const index = (tileIndex >> 10);
+		const tile = (tileIndex >> 4) & 0x3F;
+		return this.bus.cartridge.chrBanks[index][tile];
 	}
 
-	WriteCHR(address: number, value: number): void {
-		throw new Error("Method not implemented.");
-	}
+	WriteCHR(address: number, value: number): void { }
 
 	PPUClockEvent?(scanLine: number, ppuCycle: number): void {
-		throw new Error("Method not implemented.");
+		// throw new Error("Method not implemented.");
 	}
 
 	private SwitchBank(value: number) {
-		let index = 0;
-		let more = false;
-		switch (this.bankDataRegister) {
-			case 0:
-				more = true;
-				break;
-			case 1:
-				index = 2;
-				more = true;
-				break;
-			case 2:
-				index = 4;
-				break;
-			case 3:
-				index = 5;
-				break;
-			case 4:
-				index = 6;
-				break;
-			case 5:
-				break;
-			case 6:
-				break;
-			case 7:
-				break;
+		if (this.bankDataRegister < 6) {
+			this.SwitchChrRom(value);
+		} else {
+			this.SwitchPrgRom(value);
+		}
+	}
+
+	private SwitchChrRom(value: number) {
+		value &= this.maxChr;
+		let large = false;
+		let index = this.bankDataRegister;
+		if (index < 2) {
+			index *= 2;
+			large = true;
+			if (this.chrInversion)
+				index += 4;
+		} else {
+			index += 2;
+			if (this.chrInversion)
+				index -= 4;
 		}
 
-		if (this.chrInversion) {
-			this.bus.cartridge.chrIndex[index + 4] = value;
-			if (more) this.bus.cartridge.chrIndex[index + 5] = value + 1;
+		this.bus.cartridge.chrIndex[index++] = value;
+		if (large)
+			this.bus.cartridge.chrIndex[index] = value + 1;
+	}
+
+	private SwitchPrgRom(value: number) {
+		value &= this.maxPrg;
+		if (this.bankDataRegister === 7) {
+			this.bus.cartridge.prgIndex[1] = value;
+			return;
+		}
+
+		if (this.bankMode) {
+			this.bus.cartridge.prgIndex[0] = this.maxPrg - 1;
+			this.bus.cartridge.prgIndex[2] = value;
 		} else {
-			this.bus.cartridge.chrIndex[index] = value;
-			if (more) this.bus.cartridge.chrIndex[index + 5] = value + 1;
+			this.bus.cartridge.prgIndex[0] = value;
+			this.bus.cartridge.prgIndex[2] = this.maxPrg - 1;
 		}
 	}
 }

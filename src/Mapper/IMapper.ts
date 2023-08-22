@@ -2,6 +2,13 @@ import { Bus } from "../Bus";
 import { Tile } from "../PPU/PPUBlock";
 import { Mapper0 } from "./Mapper0";
 import { Mapper2 } from "./Mapper2";
+import { Mapper4 } from "./Mapper4";
+
+/**Mapper初始化选项 */
+export interface MapperInitOption {
+	maxPrg: number;
+	maxChr: number;
+}
 
 export interface IMapper {
 	readonly bus: Bus;
@@ -15,7 +22,7 @@ export interface IMapper {
 	 * Mapper初始化
 	 * @param option 最大PRG的编号
 	 */
-	Initialization(option: { maxPrg: number }): void;
+	Initialization(option: MapperInitOption): void;
 
 	ReadPRG(address: number): number;
 	WritePRG(address: number, value: number): void;
@@ -37,6 +44,7 @@ export class MapperLoader {
 		switch (mapperIndex) {
 			case 0: return Mapper0;
 			case 2: return Mapper2;
+			case 4: return Mapper4;
 		}
 	}
 }
